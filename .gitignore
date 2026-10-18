@@ -1,0 +1,13 @@
+.dart_tool/
+build/
+target/
+.env
+.env.*
+!.env.example
+*.key
+*.keystore
+*.jks
+*.sav
+*.srm
+*.state
+publish-state.json
