@@ -186,3 +186,28 @@ fn short_code_pairs_devices_on_the_same_network() {
     assert_eq!(odin.join(&invitation.short.to_lowercase()).unwrap(), "PC");
     assert_eq!(pc.peers().unwrap()[0].name, "Odin");
 }
+
+#[test]
+fn a_removed_device_can_be_paired_again() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (pc, odin, lost) = (
+        Device::new(tmp.path(), "PC"),
+        Device::new(tmp.path(), "Odin"),
+        Device::new(tmp.path(), "Found"),
+    );
+    odin.node.join(&pc.node.invite().unwrap().code).unwrap();
+    lost.node.join(&pc.node.invite().unwrap().code).unwrap();
+    odin.node.sync_all().unwrap();
+    pc.node.remove(lost.node.id()).unwrap();
+    odin.node.sync_all().unwrap();
+    assert_eq!(odin.peer_names(), ["PC"]);
+
+    // Found again: pair it through Odin. Times have one-second resolution.
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    lost.node.join(&odin.node.invite().unwrap().code).unwrap();
+    // PC learns of the newer pairing from Odin instead of keeping the removal.
+    pc.node.sync_all().unwrap();
+    assert_eq!(pc.peer_names(), ["Found", "Odin"]);
+    let report = lost.node.sync_all().unwrap();
+    assert!(report.unreachable.is_empty(), "{:?}", report.unreachable);
+}

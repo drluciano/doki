@@ -112,3 +112,67 @@ class Review {
   String? get capturedLocalChanges => json['captured_local_changes'] as String?;
   bool get isProposal => json['proposal'] != null;
 }
+
+/// Another device in this device's group (`peer_list`).
+class Peer {
+  Peer(Map<String, dynamic> json)
+    : id = json['id'] as String,
+      name = json['name'] as String,
+      introducedBy = json['introduced_by'] as String?,
+      lastSync = DateTime.tryParse(json['last_sync'] as String? ?? '')?.toLocal();
+  final String id, name;
+
+  /// Name of the device that introduced this one; null if paired directly.
+  final String? introducedBy;
+  final DateTime? lastSync;
+}
+
+/// Codes from `peer_invite`, open for 15 minutes.
+class Invitation {
+  Invitation(Map<String, dynamic> json)
+    : code = json['code'] as String,
+      short = json['short'] as String,
+      expires = DateTime.now().add(const Duration(minutes: 15));
+
+  /// Works from any network.
+  final String code;
+
+  /// `XXXX-XXXX`; works on the same network only.
+  final String short;
+  final DateTime expires;
+}
+
+/// Result of a `peer_sync`, in counts the UI can put into words.
+class PeerSyncReport {
+  factory PeerSyncReport(Map<String, dynamic> json) {
+    final sessions = [for (final s in json['sessions'] as List) s as Map<String, dynamic>];
+    int receivedFrom(Map<String, dynamic> s) {
+      final r = s['received'] as Map<String, dynamic>?;
+      if (r == null) return 0;
+      return (r['new_proposals'] as List).length + (r['unmapped'] as List).length;
+    }
+
+    return PeerSyncReport._(
+      reached: [for (final s in sessions) s['peer_name'] as String],
+      sent: sessions.fold(0, (n, s) => n + (s['sent'] as int)),
+      received: sessions.fold(0, (n, s) => n + receivedFrom(s)),
+      unreachable: [for (final u in json['unreachable'] as List) (u as List)[0] as String],
+    );
+  }
+
+  PeerSyncReport._({
+    required this.reached,
+    required this.sent,
+    required this.received,
+    required this.unreachable,
+  });
+
+  /// Names of devices synced with.
+  final List<String> reached;
+
+  /// Games whose current save was sent, and new offers received.
+  final int sent, received;
+
+  /// Names of devices that could not be reached (usually offline).
+  final List<String> unreachable;
+}

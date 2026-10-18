@@ -14,8 +14,10 @@
 //! device to the inviter's book and gives the joiner the inviter's book, so a
 //! new device trusts the whole group at once. Books are exchanged on every
 //! sync: a peer introduced by a trusted peer becomes trusted, and a peer one
-//! device removed is removed everywhere the news reaches. Removed ids are
-//! kept so they are never re-added. Because each device has its own key,
+//! device removed is removed everywhere the news reaches. Removals are kept
+//! with their time so a removed device is never re-added from someone else's
+//! book; only pairing it again (a newer `added_at`) brings it back, and that
+//! news spreads the same way. Because each device has its own key,
 //! removing a lost device needs no re-pairing of the others.
 //!
 //! # Sync session
@@ -98,6 +100,8 @@ pub struct PeerInfo {
     pub name: String,
     #[serde(default)]
     pub addr: PeerAddr,
+    /// When the device was paired, as recorded by the device that paired
+    /// it. Spread with the book, so a newer pairing outranks an older removal.
     pub added_at: String,
     /// The trusted device that introduced this one, if not paired directly.
     #[serde(default)]
@@ -111,7 +115,9 @@ pub struct PeerInfo {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PeerBook {
     pub peers: BTreeMap<String, PeerInfo>,
-    pub removed: BTreeSet<String>,
+    /// Removed devices and when they were removed. Kept so a removed device
+    /// is never re-added from another book, unless it is paired again later.
+    pub removed: BTreeMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -260,7 +266,7 @@ impl Ctx {
 
     fn trusts(&self, id: &str) -> Result<bool> {
         let book = self.book()?;
-        Ok(book.peers.contains_key(id) && !book.removed.contains(id))
+        Ok(book.peers.contains_key(id) && !book.removed.contains_key(id))
     }
 
     /// Fold in what a trusted peer knows: itself, the peers it introduces
@@ -268,10 +274,15 @@ impl Ctx {
     fn merge(&self, from: &str, name: &str, addr: &PeerAddr, theirs: &PeerBook) -> Result<()> {
         let me = self.me.clone();
         self.update_book(|book| {
-            for id in &theirs.removed {
-                if *id != me {
-                    book.removed.insert(id.clone());
-                    book.peers.remove(id);
+            for (id, at) in &theirs.removed {
+                let paired_since = book.peers.get(id).is_some_and(|p| p.added_at > *at);
+                if *id == me || paired_since {
+                    continue;
+                }
+                book.peers.remove(id);
+                let known = book.removed.entry(id.clone()).or_insert_with(|| at.clone());
+                if *known < *at {
+                    *known = at.clone();
                 }
             }
             if let Some(p) = book.peers.get_mut(from) {
@@ -281,19 +292,21 @@ impl Ctx {
                 }
             }
             for (id, info) in &theirs.peers {
-                if *id == me || book.removed.contains(id) || book.peers.contains_key(id) {
+                let removed_since = book.removed.get(id).is_some_and(|at| *at >= info.added_at);
+                if *id == me || removed_since || book.peers.contains_key(id) {
                     continue;
                 }
                 if peer_key(id).is_err() {
                     continue;
                 }
+                book.removed.remove(id);
                 book.peers.insert(
                     id.clone(),
                     PeerInfo {
                         id: id.clone(),
                         name: info.name.clone(),
                         addr: info.addr.clone(),
-                        added_at: now_rfc3339(),
+                        added_at: info.added_at.clone(),
                         introduced_by: Some(from.to_owned()),
                         last_sync: None,
                     },
@@ -425,7 +438,7 @@ async fn session(
     let (sent, theirs) = tokio::join!(write_msg(&mut send, &mine), read_msg::<Hello>(&mut recv));
     sent?;
     let theirs = theirs?;
-    if theirs.book.removed.contains(&ctx.me) {
+    if theirs.book.removed.contains_key(&ctx.me) {
         return Err(Error::PermissionLost(format!(
             "{} has removed this device from the group",
             theirs.name
@@ -830,7 +843,7 @@ impl PeerNode {
         let book = self.ctx.book()?;
         let ctx = self.ctx.clone();
         let ids: Vec<String> =
-            book.peers.keys().filter(|id| !book.removed.contains(*id)).cloned().collect();
+            book.peers.keys().filter(|id| !book.removed.contains_key(*id)).cloned().collect();
         let results = self.rt.block_on(async move {
             let tasks: Vec<_> = ids
                 .into_iter()
@@ -866,7 +879,7 @@ impl PeerNode {
         let mut out: Vec<PeerView> = book
             .peers
             .values()
-            .filter(|p| !book.removed.contains(&p.id))
+            .filter(|p| !book.removed.contains_key(&p.id))
             .map(|p| PeerView {
                 id: p.id.clone(),
                 name: p.name.clone(),
@@ -891,7 +904,7 @@ impl PeerNode {
         let id = id.to_owned();
         self.ctx.update_book(|b| {
             b.peers.remove(&id);
-            b.removed.insert(id);
+            b.removed.insert(id, now_rfc3339());
         })
     }
 
@@ -906,7 +919,7 @@ async fn connect_and_sync(ctx: Arc<Ctx>, id: String) -> Result<SessionReport> {
     let i = id.clone();
     let info = blocking(&ctx, move |c| {
         let book = c.book()?;
-        if book.removed.contains(&i) {
+        if book.removed.contains_key(&i) {
             return Err(Error::InvalidInput("that device was removed".into()));
         }
         book.peers.get(&i).cloned().ok_or_else(|| Error::NotFound("not a paired device".into()))

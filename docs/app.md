@@ -12,7 +12,7 @@ The app (`app/`, Flutter) is the main way to use Doki on Android and Windows. It
 1. **Welcome**: name this device. No account or network is needed for local use.
 2. **Library → Add game**: give a title and choose the emulator's save folder. Connecting only records where the save lives.
 3. **Create checkpoint**: close the game first, then confirm. Doki copies and verifies the files. If nothing changed, it says so and links the existing checkpoint.
-4. **Devices**: on the first device enter your relay address and create a pairing code; on the others paste the code (or read it from the QR code). **Sync now** sends your current saves and receives the others'. Received progress waits in **Incoming**; sync never changes a save.
+4. **Devices**: choose **Show a code on this device**, then type the short code on your other device (same Wi-Fi) or paste the long code (any network). Devices connect directly; any device can add the next one, and there is no host. Doki syncs while it is open on both devices, and **Sync now** syncs at once. Received progress waits in **Incoming**; sync never changes a save. See [peer.md](peer.md). A self-hosted [relay](relay.md) is under **Advanced**.
 5. **Incoming → review**: Doki compares the incoming save with yours. If you played on both devices it says so, and both versions stay in history whichever you choose:
    - **Back up and use this save** verifies a backup of your current save, then installs and verifies the incoming one.
    - **Keep alongside** files it in history without prompting again.
@@ -46,4 +46,4 @@ CI (`.github/workflows/app.yml`) runs the tests on Linux and Windows and publish
 
 - Verified in CI: widget tests against a fake engine; the real engine through FFI (capture, restore, a stale review refused); the Java bridge on a desktop JVM with both replace modes; Android sources compile and the APK carries the engine for arm64 and x86_64.
 - Not yet verified: the Storage Access Framework adapter on real hardware and emulator storage providers (F01). Until then, treat Android installs as experimental and keep copies of saves.
-- Not built yet: the practice-saves tutorial, a file preview before connecting a folder, QR scanning (the code can be pasted), checkpoint cleanup and per-device relay keys.
+- Not built yet: the practice-saves tutorial, a file preview before connecting a folder, QR codes, background sync on Android, checkpoint cleanup and per-device relay keys. Peer-to-peer sync is tested between devices on one machine and over a local network, not yet between an Android device and a PC.
