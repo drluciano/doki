@@ -20,6 +20,8 @@ The app (`app/`, Flutter) is the main way to use Doki on Android and Windows. It
 6. **History** (open a game): every checkpoint, which one is the current save, and progress set aside by a choice. **Restore this checkpoint** goes through the same backup and verification as Use.
 7. If an install is interrupted (power loss, storage removed), the game shows **A change to this save was interrupted** until you choose **Finish the change** or **Put my save back**. Doki never decides for you.
 
+The app opens on a short doki splash that fades into the library once the vault has loaded. The **Help** tab has the same how-tos in short form (adding a game, checkpoints, pairing, sync, Incoming, using and restoring saves, recovery, keyboard and controller); its text lives in `app/lib/screens/help.dart`, so update it when the wording of a button it names changes.
+
 Every error says what happened, whether your playable save changed, and what to do next, with technical details under **Details**.
 
 ## Building

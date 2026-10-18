@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Doki cream (DokiColors.cream), so the launch screen matches the app's splash. -->
+    <color name="doki_cream">#FAF7F2</color>
+</resources>
