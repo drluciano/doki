@@ -1,10 +1,10 @@
 # F01 read-only SAF probe
 
-Experimental native Java harness, not Doki. Not compiled, installed or device-tested. Intended evidence target: owner-reported AYN Odin3 / Android 15 / Eden 0.2.1. No support claim follows from source inspection.
+Experimental native Java harness, not Doki. Hosted compilation and lint passed; it has not been installed or device-tested. Intended evidence target: owner-reported AYN Odin3 / Android 15 / Eden 0.2.1. No support claim follows from source inspection.
 
-## Pending hosted validation
+## Hosted validation
 
-The workflow `.github/workflows/f01-saf-probe.yml` validates this project at `tools/f01-saf-probe`. It compiles/lints only this harness on path-filtered pull requests or manual dispatch, using a hosted Ubuntu runner, JDK17, Gradle8.11.1 and SDK35/Build Tools35.0.0. It uploads a debug test APK and lint reports for seven days. No secrets, device installation, deployment or production signing. Local tooling remains absent; CI has not been run and compilation is not established. This is F01 probe validation, not the full application's G02 pipeline.
+The workflow `.github/workflows/f01-saf-probe.yml` validates this project at `tools/f01-saf-probe`. It compiles/lints only this harness on path-filtered pull requests or manual dispatch, using a hosted Ubuntu runner, JDK17, Gradle8.11.1 and SDK35/Build Tools35.0.0. It uploads a debug test APK and lint reports for seven days. No secrets, device installation, deployment or production signing. Local tooling remains absent. [Hosted build 39086483179](https://github.com/drluciano/doki/actions/runs/39086483179) passed compile and lint for code revision `7e9ecd51becab0f6d1cc40d4fece274b28cac3d3`, producing a debug APK and lint reports. Subsequent documentation changes do not establish device behavior. This is F01 probe validation, not the full application's G02 pipeline.
 
 Action syntax was checked against official [setup-java](https://github.com/actions/setup-java), [setup-gradle](https://github.com/gradle/actions/blob/main/docs/setup-gradle.md) and [upload-artifact](https://github.com/actions/upload-artifact) documentation. All workflow actions are pinned to resolved release commit SHAs (checkout v7.0.1, setup-java v6.1.0, setup-gradle v6.4.0, upload-artifact v7.0.2).
 
@@ -24,7 +24,7 @@ Five-second cancellation is cooperative: a provider that ignores cancellation ma
 
 ## Build prerequisites and exact plan
 
-As checked during preparation, java, gradle and adb did not resolve on PATH. No SDK/tool installation was performed. Compilation is blocked on toolchain provisioning. No wrapper binary is bundled; do not claim `gradlew` works.
+As checked during preparation, java, gradle and adb did not resolve on PATH. No SDK/tool installation was performed. Local compilation requires toolchain provisioning; hosted compilation is verified as linked above. No wrapper binary is bundled; do not claim `gradlew` works.
 
 Use JDK 17, Gradle 8.11.1, Android SDK Platform 35 and Build Tools 35.0.0, with pinned Android Gradle Plugin 8.9.2. This is a deliberately chosen compatible baseline, not a latest-toolchain claim. [Official AGP compatibility table](https://developer.android.com/build/releases/agp-8-9-0-release-notes) documents the series requirements. No Kotlin, Flutter or NDK is needed. Initial Gradle dependency resolution needs approved network access; no permission workaround is included.
 
@@ -37,7 +37,7 @@ gradle --version
 gradle --no-daemon :app:assembleDebug :app:lintDebug
 ```
 
-Expected build artifact: `app/build/outputs/apk/debug/app-debug.apk`. The task has not been run. Generate and commit a verified Gradle wrapper/checksum later if this harness becomes a maintained repository artifact. Do not install an APK or interact with the device without the agreed device setup step.
+Expected build artifact: `app/build/outputs/apk/debug/app-debug.apk`. The hosted task passed as linked above; no device tests have run. Generate and commit a verified Gradle wrapper/checksum later if this harness becomes a maintained repository artifact. Do not install an APK or interact with the device without the agreed device setup step.
 
 ## Meaningful verification checklist
 
