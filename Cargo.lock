@@ -322,6 +322,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "doki-ffi"
+version = "0.1.0"
+dependencies = [
+ "doki-api",
+ "doki-engine",
+ "tempfile",
+]
+
+[[package]]
 name = "doki-jni"
 version = "0.1.0"
 dependencies = [

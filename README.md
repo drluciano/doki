@@ -3,9 +3,13 @@ A save handoff tool with version history and review, where syncing a save and ac
 
 ## Status
 
-The safety engine works today for save folders on Windows, Linux and macOS, driven from a command line. It captures checkpoints, hands them to another device as a file or through a small self-hostable relay with end-to-end encryption, detects when both devices played, backs up and verifies before replacing anything, and recovers from interrupted installs. The Flutter app and the Android adapter are next.
+The safety engine captures checkpoints, hands them to another device as a file or through a small self-hostable relay with end-to-end encryption, detects when both devices played, backs up and verifies before replacing anything, and recovers from interrupted installs. You can drive it from the Flutter app on Windows and Android (Linux for development) or from the command line. The Android folder adapter is built but not yet tested on real hardware.
 
 ## Try it
+
+The app: see [docs/app.md](docs/app.md). CI publishes test builds for Windows and Android.
+
+The command line:
 
 Requires Rust 1.89 or newer.
 
@@ -25,4 +29,4 @@ Use copies of saves while Doki is pre-release.
 
 - [Safety contract](docs/spec/safety-contract.md): what Doki guarantees, every state and what happens after an interruption.
 - [Open questions](docs/spec/open-questions.md): defaults chosen where the brief left a decision open.
-- [Command line](docs/cli.md), [relay](docs/relay.md), [engineering plan](docs/engineering.md), [design](docs/design.md), [contributing](CONTRIBUTING.md).
+- [App](docs/app.md), [command line](docs/cli.md), [relay](docs/relay.md), [engineering plan](docs/engineering.md), [design](docs/design.md), [contributing](CONTRIBUTING.md).

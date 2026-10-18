@@ -1,13 +1,13 @@
 # Engineering plan
 
-Status: the local safety engine is implemented in `crates/` (Rust workspace) and specified in [spec/safety-contract.md](spec/safety-contract.md), which is normative where this plan differs. The Flutter app, Android adapter and relay are still planned.
+Status: the local safety engine is implemented in `crates/` (Rust workspace) and specified in [spec/safety-contract.md](spec/safety-contract.md), which is normative where this plan differs. The relay, the Flutter app (`app/`) and the Android folder adapter are built; the Android adapter awaits hardware testing (F01).
 
 ## Proposed module boundaries
 
-- `apps/doki` (planned): Flutter UI, navigation, accessible design system, tutorial, review, history and device management. Keep filesystem and protocol decisions outside widgets; call the engine through a generated bridge.
+- `app` (built, tutorial pending): Flutter UI with Library, Incoming, History, Devices, review and recovery. Filesystem and protocol decisions stay outside widgets: every action is one JSON request through `crates/doki-api`, reached by `crates/doki-ffi` (desktop, Dart FFI) or `crates/doki-jni` with `android/bridge` (Android). The bridge is hand-written and narrow (one function each way), so no binding generator is needed. See [app.md](app.md).
 - `crates/doki-core` (built): domain types, checkpoint identity, bundle path rules, ancestry relation and the stable error taxonomy. Pure; no I/O.
 - `crates/doki-vault` (built): immutable content-addressed objects, checkpoints, atomically replaced records and OS locks. JSON files are the source of truth; a faster index may be added if it stays rebuildable from them.
-- `crates/doki-platform` (built for desktop folders): the `SaveLocation` interface for reading, staging and replacing save files, with capability reporting and fault injection. The Android Storage Access Framework adapter implements the same interface.
+- `crates/doki-platform` (built): the `SaveLocation` interface for reading, staging and replacing save files, with capability reporting (`ReplaceMode`) and fault injection. The Android Storage Access Framework adapter (`app/android/.../SafSaveFolder.java`) implements the same interface through the JNI bridge.
 - `crates/doki-engine` (built): capture, proposals, review, journaled install with verified backup, recovery, and handoff packages (the first transport). No network code.
 - `crates/doki-cli` (built): the `doki` command, used for testing and power users until the app exists.
 - `packages/emulator_profiles` (planned): versioned declarative discovery, bundle membership and compatibility rules. No arbitrary downloaded executable plugins in the initial release. Until then every bundle uses the `generic-folder` profile (all files in the chosen folder).
@@ -15,7 +15,7 @@ Status: the local safety engine is implemented in `crates/` (Rust workspace) and
 - `crates/doki-relay` (built): small self-hostable store-and-forward server for encrypted handoff packages. `crates/doki-sync` (built) is the client: pairing codes, end-to-end encryption, sync. Per-device keys and revocation (S01) are required before internet-facing release.
 - `docs`: architecture decisions, contracts, schemas, threat model, contributor guide, user help and recovery procedures.
 
-Flutter/Rust interoperability, packaging complexity, platform capabilities and team maintenance cost must be measured in a spike before this stack becomes final. Keep generated binding code distinct and document ownership and error conversion.
+Flutter/Rust interoperability is settled as a JSON boundary (`doki-api`): errors convert to the stable codes of the safety contract (section 11) on every platform. Packaging is measured in CI: the desktop build compiles the engine through CMake, and the APK build checks the engine library is present for each ABI.
 
 ## Non-negotiable safety contract
 

@@ -25,6 +25,8 @@ CI runs the same commands on Linux and Windows (`.github/workflows/rust.yml`).
 | `crates/doki-cli` | The `doki` command. |
 | `crates/doki-api` | JSON command interface used by every non-Rust front end. |
 | `crates/doki-jni` | JNI bridge exposing `doki-api` to Java with Java-supplied save folders. |
+| `crates/doki-ffi` | C ABI over `doki-api` for the desktop app (Dart FFI). |
+| `app` | Flutter app; `tools/app-test.sh` runs its checks. See [docs/app.md](docs/app.md). |
 | `android/bridge` | Java side of the bridge (`dev.doki.bridge`); `tools/jni-desktop-test.sh` runs it on a desktop JVM. |
 | `tools/f01-saf-probe` | Android folder-access probe for F01. |
 

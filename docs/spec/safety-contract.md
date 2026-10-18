@@ -224,6 +224,8 @@ No platform claim is made beyond this table. Supported emulators are listed only
 | Vault (objects, checkpoints, records, locks) | `crates/doki-vault` | `src/tests.rs` |
 | Save-folder adapter and fault injection | `crates/doki-platform` | `local.rs` tests; engine `split_replace` recovery tests |
 | JSON command interface | `crates/doki-api` | `src/tests.rs`, including tampered reviews |
+| Desktop app bridge (C ABI) | `crates/doki-ffi` | unit test; `app/test/ffi_backend_test.dart` drives the real engine from Dart |
+| App | `app/` | widget tests: review never installs, the review is passed back unchanged, errors state whether the save changed |
 | Java bridge (JNI) | `crates/doki-jni`, `android/bridge` | `tools/jni-desktop-test.sh`: restore through both replace modes, refusal on unknown mode, missing folder |
 | Capture, review, install, recovery, packages | `crates/doki-engine` | `src/tests.rs`: crash at every install step with Finish and Put back, I/O failure at every folder write, crash during recovery, rescue of files written mid-recovery, tampered and truncated packages |
 | Relay server | `crates/doki-relay` | auth, listing, expiry, size limits |

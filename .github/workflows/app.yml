@@ -1,0 +1,104 @@
+name: App
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'android/bridge/**'
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'tools/app-test.sh'
+      - 'tools/build-android-engine.sh'
+      - '.github/workflows/app.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'android/bridge/**'
+      - 'crates/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  FLUTTER_VERSION: '3.47.7'
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Install Flutter (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -sSfL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" | tar xJ -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          sudo apt-get update -q && sudo apt-get install -y -q ninja-build libgtk-3-dev
+      - name: Install Flutter (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/flutter.zip" "https://storage.googleapis.com/flutter_infra_release/releases/stable/windows/flutter_windows_${FLUTTER_VERSION}-stable.zip"
+          unzip -q "$RUNNER_TEMP/flutter.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Analyze and test (widgets and real engine through FFI)
+        run: tools/app-test.sh
+      - name: Build desktop app
+        working-directory: app
+        run: flutter build ${{ runner.os == 'Windows' && 'windows' || 'linux' }} --release
+      - name: Upload Windows app (test build)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: doki-windows
+          path: app/build/windows/x64/runner/Release/
+          if-no-files-found: error
+          retention-days: 14
+
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Rust and Android targets
+        run: |
+          rustup toolchain install stable --profile minimal && rustup default stable
+          rustup target add aarch64-linux-android x86_64-linux-android
+          cargo install cargo-ndk --locked
+      - name: Install Flutter
+        run: |
+          curl -sSfL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" | tar xJ -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Build engine library
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+        run: tools/build-android-engine.sh
+      - name: Build APK
+        working-directory: app
+        run: flutter build apk --release
+      - name: Check the APK carries the engine
+        run: |
+          unzip -l app/build/app/outputs/flutter-apk/app-release.apk | tee /tmp/apk.txt | grep -q 'lib/arm64-v8a/libdoki_jni.so'
+          grep -q 'lib/x86_64/libdoki_jni.so' /tmp/apk.txt
+      - name: Upload APK (test build, debug-signed)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: doki-android
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
