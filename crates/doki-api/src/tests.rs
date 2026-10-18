@@ -93,3 +93,34 @@ fn a_tampered_review_cannot_skip_the_recheck() {
     assert_eq!(out["error"]["code"], "LocalChangedSinceReview");
     assert_eq!(std::fs::read(save.join("g.sav")).unwrap(), b"new");
 }
+
+#[test]
+fn peers_pair_and_sync_over_json() {
+    // Only the peer commands read this variable.
+    std::env::set_var("DOKI_PEER_NETWORK", "loopback");
+    let tmp = tempfile::tempdir().unwrap();
+    let (pc, odin) = (tmp.path().join("pc"), tmp.path().join("odin"));
+    let (pc, odin) = (pc.to_str().unwrap(), odin.to_str().unwrap());
+    let save = tmp.path().join("save");
+    std::fs::create_dir_all(&save).unwrap();
+    ok(pc, json!({"cmd": "init", "name": "PC"}));
+    ok(odin, json!({"cmd": "init", "name": "Odin"}));
+    ok(pc, json!({"cmd": "add", "name": "Emerald", "location": save}));
+    std::fs::write(save.join("e.sav"), b"one").unwrap();
+    ok(pc, json!({"cmd": "capture", "game": "Emerald"}));
+
+    let code = ok(pc, json!({"cmd": "peer_invite"}))["code"].as_str().unwrap().to_owned();
+    assert_eq!(ok(odin, json!({"cmd": "peer_join", "code": code}))["name"], "PC");
+    assert_eq!(ok(odin, json!({"cmd": "unmapped"})).as_array().unwrap().len(), 1);
+    let peers = ok(pc, json!({"cmd": "peer_list"}));
+    assert_eq!(peers[0]["name"], "Odin");
+
+    let report = ok(odin, json!({"cmd": "peer_sync"}));
+    assert_eq!(report["sessions"][0]["peer_name"], "PC");
+    assert_eq!(report["sessions"][0]["sent"], 0);
+
+    let id = peers[0]["id"].as_str().unwrap();
+    ok(pc, json!({"cmd": "peer_remove", "id": id}));
+    let report = ok(odin, json!({"cmd": "peer_sync"}));
+    assert_eq!(report["unreachable"].as_array().unwrap().len(), 1);
+}

@@ -31,6 +31,15 @@
 //! | `relay_code` | – | `{pairing_code}` or `null` |
 //! | `relay_forget` | – | `null` |
 //! | `sync` | – | `{uploaded, received, rejected}` |
+//! | `peer_invite` | – | `{code}` pairing code valid 15 minutes |
+//! | `peer_join` | `code` | `{name}` of the inviting device; syncs with it at once |
+//! | `peer_sync` | – | `{sessions: [{peer_name, sent, received}], unreachable: [[name, reason]]}` |
+//! | `peer_list` | – | `[{id, name, introduced_by, last_sync}]` |
+//! | `peer_remove` | `id` | `null` |
+//!
+//! The `peer_*` commands use peer-to-peer sync (`doki-peer`). The first one
+//! starts this device's peer node, which keeps answering other devices in
+//! the background for the life of the process.
 //!
 //! # Responses
 //!
@@ -38,8 +47,12 @@
 //! `{"ok": false, "error": {"code", "message", "save_may_be_mixed"}}` where
 //! `code` is a stable identifier from the safety contract, section 11.
 
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
+
 use doki_core::{BundleId, CaptureMode, CheckpointId, Error, Result};
 use doki_engine::{Engine, LocationProvider, RecoveryAction, Review};
+use doki_peer::{Network, PeerNode};
 use doki_vault::Vault;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -69,6 +82,11 @@ enum Request {
     RelayCode,
     RelayForget,
     Sync,
+    PeerInvite,
+    PeerJoin { code: String },
+    PeerSync,
+    PeerList,
+    PeerRemove { id: String },
 }
 
 #[derive(Deserialize)]
@@ -97,6 +115,24 @@ pub fn handle<P: LocationProvider>(vault_path: &str, provider: P, request: &str)
         })
         .to_string(),
     }
+}
+
+/// The running peer node for `vault_path`, started on first use.
+///
+/// `DOKI_PEER_NETWORK=loopback` keeps it on this machine (tests only).
+fn peer_node(vault_path: &str) -> Result<Arc<PeerNode>> {
+    static NODES: OnceLock<Mutex<HashMap<String, Arc<PeerNode>>>> = OnceLock::new();
+    let mut nodes = NODES.get_or_init(Default::default).lock().unwrap_or_else(|p| p.into_inner());
+    if let Some(node) = nodes.get(vault_path) {
+        return Ok(node.clone());
+    }
+    let network = match std::env::var("DOKI_PEER_NETWORK").as_deref() {
+        Ok("loopback") => Network::Loopback,
+        _ => Network::Internet,
+    };
+    let node = Arc::new(PeerNode::start(vault_path, network)?);
+    nodes.insert(vault_path.to_owned(), node.clone());
+    Ok(node)
 }
 
 fn to_value<T: serde::Serialize>(v: T) -> Result<Value> {
@@ -212,6 +248,14 @@ fn dispatch<P: LocationProvider>(vault_path: &str, provider: P, req: Request) ->
         Request::Sync => {
             let r = doki_sync::sync(&engine)?;
             Ok(json!({ "uploaded": r.uploaded, "received": r.received, "rejected": r.rejected }))
+        }
+        Request::PeerInvite => to_value(peer_node(vault_path)?.invite()?),
+        Request::PeerJoin { code } => Ok(json!({ "name": peer_node(vault_path)?.join(&code)? })),
+        Request::PeerSync => to_value(peer_node(vault_path)?.sync_all()?),
+        Request::PeerList => to_value(peer_node(vault_path)?.peers()?),
+        Request::PeerRemove { id } => {
+            peer_node(vault_path)?.remove(&id)?;
+            Ok(Value::Null)
         }
     }
 }

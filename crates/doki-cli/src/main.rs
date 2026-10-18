@@ -4,7 +4,7 @@
 //! progress, Use this save, Restore a checkpoint. See `docs/cli.md`.
 
 use std::io::{self, BufRead, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
@@ -127,6 +127,26 @@ enum Command {
     /// Send your current saves to the relay and receive other devices'
     /// progress. Never changes your saves; review incoming progress after.
     Sync,
+    /// Pair devices and sync directly between them, with no server.
+    #[command(subcommand)]
+    Devices(DevicesCommand),
+}
+
+#[derive(Subcommand)]
+enum DevicesCommand {
+    /// Show a pairing code and wait for your other devices to join.
+    Invite,
+    /// Join the devices of the one showing this code, then sync with it.
+    Join { code: String },
+    /// Sync directly with every paired device that can be reached now.
+    /// Never changes your saves; review incoming progress after.
+    Sync,
+    /// Keep answering your other devices until stopped (Ctrl+C).
+    Serve,
+    /// List paired devices.
+    List,
+    /// Remove a device (name or id). It can no longer sync with yours.
+    Remove { device: String },
 }
 
 #[derive(Subcommand)]
@@ -455,26 +475,14 @@ fn run(cli: Cli) -> Result<(), Error> {
             println!("Removed {freed} bytes of leftovers. No checkpoints were removed.");
         }
         Command::Relay(cmd) => relay(&engine, cmd)?,
+        Command::Devices(cmd) => devices(&engine, &vault_dir, cmd)?,
         Command::Sync => {
             let report = doki_sync::sync(&engine)?;
             for b in &report.uploaded {
                 println!("Sent your current save of {}.", engine.bundle(b)?.name);
             }
             for s in &report.received {
-                for (bundle, cp) in &s.new_proposals {
-                    let name = engine.bundle(bundle)?.name;
-                    println!(
-                        "Progress from {} is ready for {name}: `doki use \"{name}\" {}`",
-                        s.from_device,
-                        cp.short()
-                    );
-                }
-                for (bundle, name) in &s.unmapped {
-                    println!(
-                        "\"{name}\" from {} is not set up here. Link it: `doki add \"{name}\" <folder> --link {bundle}`",
-                        s.from_device
-                    );
-                }
+                print_received(&engine, s)?;
             }
             for (seq, why) in &report.rejected {
                 eprintln!("Skipped relay package {seq}: {why}");
@@ -486,6 +494,104 @@ fn run(cli: Cli) -> Result<(), Error> {
             }
         }
     }
+    Ok(())
+}
+
+fn print_received(engine: &Engine, s: &doki_engine::ImportSummary) -> Result<(), Error> {
+    for (bundle, cp) in &s.new_proposals {
+        let name = engine.bundle(bundle)?.name;
+        println!(
+            "Progress from {} is ready for {name}: `doki use \"{name}\" {}`",
+            s.from_device,
+            cp.short()
+        );
+    }
+    for (bundle, name) in &s.unmapped {
+        println!(
+            "\"{name}\" from {} is not set up here. Link it: `doki add \"{name}\" <folder> --link {bundle}`",
+            s.from_device
+        );
+    }
+    Ok(())
+}
+
+fn devices(engine: &Engine, vault_dir: &Path, cmd: DevicesCommand) -> Result<(), Error> {
+    use doki_peer::{Network, PeerNode};
+    let node = PeerNode::start(vault_dir, Network::Internet)?;
+    match cmd {
+        DevicesCommand::Invite => {
+            let invitation = node.invite()?;
+            println!("On your other device, run:");
+            println!("  doki devices join {}", invitation.code);
+            println!("On the same network, this short code also works: {}", invitation.short);
+            println!("The code works for 15 minutes. Share it only with your own devices.");
+            println!("Waiting for devices to join. Press Ctrl+C when done.");
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(3600));
+            }
+        }
+        DevicesCommand::Join { code } => {
+            let name = node.join(&code)?;
+            println!("Paired with {name} and synced. Your saves were not changed.");
+            for p in node.peers()? {
+                if p.introduced_by.is_some() {
+                    println!("Also trusted through {name}: {}", p.name);
+                }
+            }
+            println!("Run `doki incoming` to review progress that arrived.");
+        }
+        DevicesCommand::Sync => {
+            let report = node.sync_all()?;
+            for s in &report.sessions {
+                match &s.received {
+                    Some(r) => print_received(engine, r)?,
+                    None => println!("{}: up to date.", s.peer_name),
+                }
+            }
+            for (name, why) in &report.unreachable {
+                println!("{name}: not reachable now ({why}).");
+            }
+            if report.sessions.is_empty() && report.unreachable.is_empty() {
+                println!("No paired devices yet. Use `doki devices invite` on one device.");
+            } else {
+                println!("Done. Your saves were not changed.");
+            }
+        }
+        DevicesCommand::Serve => {
+            println!("Answering your other devices as {}. Press Ctrl+C to stop.", node.id());
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(3600));
+            }
+        }
+        DevicesCommand::List => {
+            let peers = node.peers()?;
+            if peers.is_empty() {
+                println!("No paired devices yet.");
+            }
+            for p in peers {
+                let last = p.last_sync.as_deref().unwrap_or("never");
+                println!("{}  last synced {last}\n  {}", p.name, p.id);
+            }
+        }
+        DevicesCommand::Remove { device } => {
+            let peers = node.peers()?;
+            let matches: Vec<_> =
+                peers.iter().filter(|p| p.name == device || p.id.starts_with(&device)).collect();
+            match matches.as_slice() {
+                [p] => {
+                    node.remove(&p.id)?;
+                    println!("Removed {}. Its checkpoints already here stay in history.", p.name);
+                }
+                [] => return Err(Error::NotFound(format!("no paired device matches {device}"))),
+                _ => {
+                    return Err(Error::InvalidInput(format!(
+                        "{device} matches several devices; use its id"
+                    )))
+                }
+            }
+        }
+    }
+    node.shutdown();
     Ok(())
 }
 
