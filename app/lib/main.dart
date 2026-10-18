@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'backend.dart';
+import 'motion.dart';
 import 'screens/devices.dart';
 import 'screens/history.dart';
 import 'screens/incoming.dart';
@@ -8,6 +9,7 @@ import 'screens/library.dart';
 import 'screens/welcome.dart';
 import 'state.dart';
 import 'theme.dart';
+import 'widgets/focus_halo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +41,8 @@ class DokiApp extends StatelessWidget {
         title: 'Doki',
         theme: dokiTheme(),
         debugShowCheckedModeBanner: false,
+        navigatorObservers: [FocusHalo.observer],
+        builder: (context, child) => FocusHalo(child: child!),
         home: const RootGate(),
       ),
     );
@@ -96,7 +100,7 @@ class _ShellState extends State<Shell> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 720;
-        final body = IndexedStack(index: _index, children: pages);
+        final body = FadeIndexedStack(index: _index, children: pages);
         if (!wide) {
           return Scaffold(
             body: body,
