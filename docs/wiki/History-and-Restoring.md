@@ -26,9 +26,10 @@ Restoring works exactly like using incoming progress: Doki verifies a backup of 
 
 ## Other actions
 
-- **Pin (keep forever)** protects a checkpoint from any future cleanup. Today Doki never deletes checkpoints automatically, but pins are kept for when cleanup arrives.
+- **Pin (keep forever)** protects a checkpoint: it is never deleted by **Keep checkpoints for**, and cannot be deleted by hand until you unpin it.
+- **Delete from this device** deletes a checkpoint's files on this device. See [Freeing up space](Freeing-Up-Space.md).
 - **Copy the files out**: on the command line, `doki export-files` writes a checkpoint's files to any folder without touching your save. The app does not offer this yet.
 
 ## Storage
 
-Doki stores each distinct file once, so checkpoints of a save that barely changed take little extra space. There is no automatic cleanup yet. See [Roadmap and status](Roadmap-and-Status.md).
+Doki stores each distinct file once, so checkpoints of a save that barely changed take little extra space. It keeps every checkpoint until you choose otherwise. To delete checkpoints or keep them for a set time, see [Freeing up space](Freeing-Up-Space.md).

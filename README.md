@@ -42,6 +42,8 @@ Syncing a save and using it are separate actions. When progress arrives from ano
 ## Features
 
 - **Checkpoints.** Each checkpoint is an exact, verified, unchangeable copy of a game's save files. If nothing changed since the last one, Doki says so instead of storing a duplicate.
+- **Automatic checkpoints.** Doki watches your save folders and makes a checkpoint once a save has stopped changing for 30 seconds. On Android it keeps working in the background; on Windows it lives in the tray and can start with Windows.
+- **Whole emulators.** Add an emulator's save folder once and every game in it is tracked on its own, including games you start later.
 - **Review before anything changes.** Received progress waits in Incoming. Doki compares it with your save and explains how they relate: newer than yours, older, from a different playthrough, or "you played on both devices".
 - **Back up, then replace.** **Use this save** and **Restore a checkpoint** first verify a backup of your current save, re-check that you have not played since the review, then install and verify the new files.
 - **Nothing is lost by choosing.** Picking one version keeps the other in History as *Separate progress*, ready to restore.
@@ -49,13 +51,15 @@ Syncing a save and using it are separate actions. When progress arrives from ano
 - **Device to device, no account.** Pair devices with a short code on the same Wi-Fi or a long code from anywhere. Devices talk directly over an end-to-end encrypted connection, with no host and no sign-up, much like Syncthing.
 - **Optional self-hosted relay** for devices that are rarely online at the same time. It stores only encrypted packages and never decides anything.
 - **A handoff file** works too, if you would rather move saves on a USB stick or by email.
+- **You decide what is kept.** Checkpoints are kept forever by default. Delete one, or choose **Keep checkpoints for** a set time; Doki previews what goes and always keeps the newest of each game, current saves and pinned checkpoints.
+- **A library that looks like yours.** Game covers and banners from SteamGridDB (with your own free key) or your own images, Light, Dark and OLED themes, notifications, and full keyboard and controller support.
 - **App and command line.** A Flutter app for Android and Windows, and a `doki` command that drives the same engine.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    A["Play on your PC"] --> B["Create checkpoint<br/>(verified copy)"]
+    A["Play on your PC"] --> B["Checkpoint saved<br/>(verified copy)"]
     B --> C["Sync<br/>(direct, encrypted)"]
     C --> D["Incoming on your handheld<br/>(nothing changed yet)"]
     D --> E{"You review"}
@@ -74,20 +78,22 @@ Doki is **pre-release**. The engine, command line, app, Android bridge and devic
 
 | Platform | Status |
 |---|---|
-| Windows | App and CLI build and pass tests in CI. Test builds available. |
-| Android | App builds in CI (arm64, x86_64). The save-folder adapter uses Android's folder picker and is **experimental** until it is verified on real hardware. |
+| Windows | App and CLI build and pass tests in CI. Runs from the tray. Test builds available. |
+| Android | App builds in CI (arm64, x86_64) with a background watcher. The save-folder adapter uses Android's folder picker and is **experimental** until it is verified on real hardware. Updating currently needs an uninstall (see below). |
 | Linux | Used for development. App and CLI run; not a release target yet. |
 | macOS, iOS | Not supported. |
 
-Not built yet: the practice tutorial with sample saves, QR codes, background sync on Android, automatic checkpoint cleanup, and encrypted handoff files. Doki makes no claim about a specific emulator until a full restore has been tested on a real device. See [Roadmap and status](https://github.com/drluciano/doki/wiki/Roadmap-and-Status) for details.
+> **Known issue:** each Android test build is signed with a different key, so a newer APK will not install over an older one, and uninstalling deletes Doki's checkpoints on that device ([#82](https://github.com/drluciano/doki/issues/82)). Sync with another device before updating; [Updating Doki](https://github.com/drluciano/doki/wiki/Updating-Doki) has the steps. Your emulator's own save files are not affected.
+
+Not built yet: the practice tutorial with sample saves, QR codes, and encrypted handoff files. Doki makes no claim about a specific emulator until a full restore has been tested on a real device. See [Roadmap and status](https://github.com/drluciano/doki/wiki/Roadmap-and-Status) for details.
 
 ## Quick start
 
 ### The app
 
 1. Download a test build from the latest successful [App workflow run](https://github.com/drluciano/doki/actions/workflows/app.yml): `doki-windows` (a folder with `doki.exe`) or `doki-android` (a debug-signed APK). These are test builds, not releases.
-2. Name the device, then **Library → Add game** and choose the emulator's save folder. Connecting a folder changes nothing.
-3. Close the game and choose **Create checkpoint**.
+2. Name the device, then **Library → Add game** and choose the game's save folder, or choose **Whole system** for an emulator's whole save folder. Connecting a folder changes nothing.
+3. Play. Once the save settles, Doki makes a checkpoint on its own. Keep Doki running in the background (Android) or the tray (Windows).
 4. Under **Devices**, choose **Show a code on this device**, and enter the code on your other device.
 5. Progress from the other device appears in **Incoming**. Open it to review, then choose what to do.
 
@@ -101,7 +107,7 @@ Requires Rust 1.91 or newer.
 cargo build --release
 ./target/release/doki init --name PC
 ./target/release/doki add "Pokémon Emerald" "C:\path\to\emulator\saves"
-./target/release/doki capture "Pokémon Emerald" --closed
+./target/release/doki capture "Pokémon Emerald" --closed   # or: doki watch
 
 # Pair with your other device and sync directly
 ./target/release/doki devices invite        # on this device
@@ -128,7 +134,7 @@ Full instructions are in [docs/app.md](docs/app.md) and on the [Building from so
 
 ## Documentation
 
-**For players**, the [wiki](https://github.com/drluciano/doki/wiki) covers getting started, pairing devices, reviewing incoming progress, restoring checkpoints, recovering an interrupted change, troubleshooting and a glossary.
+**For players**, the [wiki](https://github.com/drluciano/doki/wiki) covers getting started, automatic checkpoints, whole emulators, game art, pairing devices, reviewing incoming progress, restoring checkpoints, freeing up space, settings and notifications, updating, recovering an interrupted change, troubleshooting and a glossary. The app has the same how-tos under **Settings → Help and how-tos**.
 
 **Reference**, in this repository:
 

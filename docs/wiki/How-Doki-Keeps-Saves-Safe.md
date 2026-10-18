@@ -10,6 +10,10 @@ Syncing only stores progress inside Doki. Your save folder changes only when you
 
 A checkpoint is an exact copy of a save's files, checked with a fingerprint (SHA-256) of every file. Once made, it is never edited. A checkpoint that is only partly copied or received is never shown or offered.
 
+## Automatic checkpoints wait for the save to settle
+
+Doki only makes a checkpoint on its own once a save has stayed the same for 30 seconds, and it re-reads the folder while copying. If anything moves, it waits and tries again. An automatic checkpoint only copies; it never replaces anything. See [Automatic checkpoints](Automatic-Checkpoints.md).
+
 ## A verified backup before every replacement
 
 Before replacing your save, Doki makes sure your current save is safely in a checkpoint and that the checkpoint's files still read back correctly. If it cannot confirm that, it replaces nothing (**Could not confirm a backup**).
@@ -36,9 +40,9 @@ Every step of this process is tested by simulating a crash at that exact point.
 
 A missing folder, revoked permission, removed SD card or empty folder is treated as "not available right now", never as "the save was deleted". Doki never records an empty save, and never deletes anything because another device no longer has it.
 
-## Nothing is deleted on its own
+## Nothing is deleted unless you ask
 
-There is no automatic cleanup of checkpoints yet. When cleanup arrives, it will show you what goes first, and pinned checkpoints will always be kept.
+Checkpoints are kept forever by default. If you choose a shorter **Keep checkpoints for** time, Doki first tells you how many would go, and always keeps the 10 newest of each game, the current save, pinned checkpoints, separate progress and anything waiting for you. Deleting a checkpoint or a removed game affects only this device, never your save folder and never your other devices. See [Freeing up space](Freeing-Up-Space.md).
 
 ## Honest errors
 
@@ -48,4 +52,5 @@ Every error says what happened, **whether your save changed**, and what to do ne
 
 - A matching fingerprint proves the files are exactly as they were. It does not prove the game can load them. Doki makes no claim that a save works in a particular emulator until that has been tested on a real device.
 - Sync is not a backup. Keep your own backups of saves you care about.
+- Automatic checkpoints are a best guess about when a save is finished. A game that writes its save in pieces far apart could be caught between pieces. That checkpoint is never used without your review, and the next one follows; turn automatic checkpoints off for such a game.
 - Android folder access is still being verified on real hardware. Treat Android installs as experimental for now.

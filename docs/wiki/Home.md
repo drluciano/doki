@@ -9,12 +9,20 @@ Play on your PC, pick up on your handheld, and come back again. Progress from an
 ## Start here
 
 - [Getting started](Getting-Started.md): install Doki, add a game and create your first checkpoint.
+- [Automatic checkpoints](Automatic-Checkpoints.md): how Doki saves checkpoints on its own, in the background or from the tray.
 - [Tracking a whole emulator](Tracking-a-Whole-Emulator.md): add an emulator's save folder once and track every game in it.
 - [Game art](Game-Art.md): covers and banners from SteamGridDB or your own images.
 - [Pairing your devices](Pairing-Devices.md): connect your phone, handheld and PC with a short code.
 - [Reviewing incoming progress](Reviewing-Incoming-Progress.md): what Doki shows you and what each choice does.
 - [History and restoring](History-and-Restoring.md): go back to any earlier checkpoint.
 - [Recovering an interrupted change](Recovering-an-Interrupted-Change.md): what to do if power was lost mid-install.
+
+## Managing Doki
+
+- [Editing and removing games](Editing-and-Removing-Games.md)
+- [Freeing up space](Freeing-Up-Space.md): delete checkpoints and choose how long to keep them.
+- [Settings and notifications](Settings-and-Notifications.md): themes, border color, notifications and running in the background.
+- [Updating Doki](Updating-Doki.md): including the current Android update limitation.
 
 ## Learn more
 
