@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'backend.dart';
 import 'motion.dart';
 import 'screens/devices.dart';
+import 'screens/help.dart';
 import 'screens/history.dart';
 import 'screens/incoming.dart';
 import 'screens/library.dart';
+import 'screens/splash.dart';
 import 'screens/welcome.dart';
 import 'state.dart';
 import 'theme.dart';
@@ -43,7 +45,7 @@ class DokiApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         navigatorObservers: [FocusHalo.observer],
         builder: (context, child) => FocusHalo(child: child!),
-        home: const RootGate(),
+        home: const SplashGate(child: RootGate()),
       ),
     );
   }
@@ -79,6 +81,7 @@ class _ShellState extends State<Shell> {
     (Icons.move_to_inbox_outlined, Icons.move_to_inbox, 'Incoming'),
     (Icons.history_outlined, Icons.history, 'History'),
     (Icons.devices_outlined, Icons.devices, 'Devices'),
+    (Icons.help_outline, Icons.help, 'Help'),
   ];
 
   @override
@@ -90,6 +93,7 @@ class _ShellState extends State<Shell> {
       const IncomingScreen(),
       const HistoryScreen(),
       const DevicesScreen(),
+      const HelpScreen(),
     ];
     Widget icon(int i, bool selected) {
       final d = _destinations[i];
