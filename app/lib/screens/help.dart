@@ -61,13 +61,14 @@ const helpTopics = [
   ),
   HelpTopic(
     Icons.bookmark_add_outlined,
-    'Create a checkpoint',
-    'Save a copy of your progress to keep and share.',
+    'Checkpoints happen on their own',
+    'Doki saves a copy of your progress after you play.',
     [
-      'Close the game in the emulator first, so the save is complete.',
-      'Open the game in Library and choose Create checkpoint.',
-      'Add a label if you like, such as "Before the gym".',
-      'Library shows "New progress not in a checkpoint yet" when you have played since the last one.',
+      'Doki checks each save folder every few seconds. Once a save has stayed the same for 30 seconds, it saves a checkpoint.',
+      'Library shows "New progress, checkpoint coming soon" while it waits.',
+      'To save one right away, close the game in the emulator, open it in Library and choose Checkpoint now. You can add a label, such as "Before the gym".',
+      'On Android Doki keeps checking in the background. On Windows it keeps checking from the tray.',
+      'Edit game turns automatic checkpoints off for a game; then choose Create checkpoint yourself.',
     ],
   ),
   HelpTopic(
@@ -110,6 +111,40 @@ const helpTopics = [
     'Open the game, find the checkpoint in its history and choose Restore this checkpoint.',
     'Review it, then choose Back up and restore. Your current save is kept as a checkpoint first.',
   ]),
+  HelpTopic(
+    Icons.delete_outline,
+    'Delete checkpoints and games',
+    'Free up space on this device. Your other devices keep their copies.',
+    [
+      'Open a game, find the checkpoint in its history, open its menu and choose Delete from this device.',
+      'The current save and pinned checkpoints can\'t be deleted. Choose Unpin first to delete a pinned one.',
+      'A game you removed is listed under On your other devices. Its menu has Delete from this device, which deletes its checkpoints here.',
+      'For a game set up only on another device, the same menu says Don\'t set up on this device.',
+      'Deleting never touches your save folder.',
+    ],
+  ),
+  HelpTopic(
+    Icons.auto_delete_outlined,
+    'Choose how long to keep checkpoints',
+    'Keep every checkpoint, or let older ones go.',
+    [
+      'In History, choose Keep checkpoints for: Forever (the default), 1 year, 90, 30 or 7 days.',
+      'Before a shorter time takes effect, Doki tells you how many checkpoints would be deleted.',
+      'The 10 newest checkpoints of each game, current saves and pinned checkpoints always stay. Choose Pin (keep forever) on a checkpoint to keep it.',
+      'This only affects checkpoints on this device.',
+    ],
+  ),
+  HelpTopic(
+    Icons.notifications_outlined,
+    'Notifications',
+    'Hear about checkpoints and new progress without opening Doki.',
+    [
+      'Under Devices, turn each kind on or off: Checkpoint saved, New progress found and Progress from your other devices.',
+      'On Android, allow notifications for Doki when asked.',
+      'On Windows, notifications come from the Doki icon in the tray, so Keep Doki in the tray needs to be on.',
+      'A newer notification about the same game replaces the older one.',
+    ],
+  ),
   HelpTopic(
     Icons.build_circle_outlined,
     'If something goes wrong',

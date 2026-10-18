@@ -32,7 +32,7 @@ The app opens on a doki splash. It waits until the vault has loaded, then the le
 - **Theme**: Follow system (the default), Light, Dark or OLED (dark with true black behind everything, for OLED screens). The change applies at once.
 - **Border color**: the color of the soft border that shows where you are with a mouse, keyboard or controller. Each color has a light and a dark shade so it stays visible on every theme. High contrast mode always uses the text color.
 - Both choices are stored in `appearance.json` in the app's support folder, next to the vault. Deleting that file returns to the defaults; nothing in it touches saves.
-- **Help and how-tos**: short how-tos (adding a game, checkpoints, pairing, sync, Incoming, using and restoring saves, recovery, keyboard and controller). Their text lives in `app/lib/screens/help.dart`, so update it when the wording of a button it names changes.
+- **Help and how-tos**: short how-tos (adding a game or a whole system, game art, automatic checkpoints, pairing, sync, Incoming, using and restoring saves, deleting checkpoints and games, how long checkpoints are kept, notifications, recovery, keyboard and controller). Their text lives in `app/lib/screens/help.dart`, so update it when the wording of a button it names changes.
 
 Every error says what happened, whether your playable save changed, and what to do next, with technical details under **Details**.
 
