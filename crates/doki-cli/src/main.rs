@@ -120,6 +120,25 @@ enum Command {
     },
     /// Remove temporary leftovers. Never removes checkpoints.
     Clean,
+    /// Pair this device with a relay so devices can exchange progress
+    /// without being online together.
+    #[command(subcommand)]
+    Relay(RelayCommand),
+    /// Send your current saves to the relay and receive other devices'
+    /// progress. Never changes your saves; review incoming progress after.
+    Sync,
+}
+
+#[derive(Subcommand)]
+enum RelayCommand {
+    /// Start a new space for your devices on a relay and pair this device.
+    Create { url: String },
+    /// Pair this device using the code shown on your first device.
+    Join { code: String },
+    /// Show the pairing code for adding another device.
+    Code,
+    /// Unpair this device. Nothing is deleted from the relay or other devices.
+    Forget,
 }
 
 fn main() -> ExitCode {
@@ -433,6 +452,77 @@ fn run(cli: Cli) -> Result<(), Error> {
         Command::Clean => {
             let freed = engine.clean_leftovers()?;
             println!("Removed {freed} bytes of leftovers. No checkpoints were removed.");
+        }
+        Command::Relay(cmd) => relay(&engine, cmd)?,
+        Command::Sync => {
+            let report = doki_sync::sync(&engine)?;
+            for b in &report.uploaded {
+                println!("Sent your current save of {}.", engine.bundle(b)?.name);
+            }
+            for s in &report.received {
+                for (bundle, cp) in &s.new_proposals {
+                    let name = engine.bundle(bundle)?.name;
+                    println!(
+                        "Progress from {} is ready for {name}: `doki use \"{name}\" {}`",
+                        s.from_device,
+                        cp.short()
+                    );
+                }
+                for (bundle, name) in &s.unmapped {
+                    println!(
+                        "\"{name}\" from {} is not set up here. Link it: `doki add \"{name}\" <folder> --link {bundle}`",
+                        s.from_device
+                    );
+                }
+            }
+            for (seq, why) in &report.rejected {
+                eprintln!("Skipped relay package {seq}: {why}");
+            }
+            if report.uploaded.is_empty() && report.received.is_empty() {
+                println!("Up to date. Your saves were not changed.");
+            } else {
+                println!("Done. Your saves were not changed.");
+            }
+        }
+    }
+    Ok(())
+}
+
+fn relay(engine: &Engine, cmd: RelayCommand) -> Result<(), Error> {
+    match cmd {
+        RelayCommand::Create { url } => {
+            if doki_sync::load_link(engine)?.is_some() {
+                return Err(Error::InvalidInput(
+                    "already paired; run `doki relay forget` first".into(),
+                ));
+            }
+            let link = doki_sync::RelayLink::create(&url)?;
+            doki_sync::connect(&link)?;
+            doki_sync::save_link(engine, &link)?;
+            println!("Paired with {}. On your other device, run:", link.url);
+            println!("  doki relay join {}", link.pairing_code());
+            println!("Anyone with this code can read your progress. Share it only with your own devices.");
+        }
+        RelayCommand::Join { code } => {
+            if doki_sync::load_link(engine)?.is_some() {
+                return Err(Error::InvalidInput(
+                    "already paired; run `doki relay forget` first".into(),
+                ));
+            }
+            let link = doki_sync::RelayLink::from_pairing_code(&code)?;
+            doki_sync::connect(&link)?;
+            doki_sync::save_link(engine, &link)?;
+            println!("Paired with {}. Run `doki sync` to exchange progress.", link.url);
+        }
+        RelayCommand::Code => match doki_sync::load_link(engine)? {
+            Some(link) => println!("{}", link.pairing_code()),
+            None => {
+                println!("Not paired. Use `doki relay create <url>` or `doki relay join <code>`.")
+            }
+        },
+        RelayCommand::Forget => {
+            doki_sync::forget_link(engine)?;
+            println!("Unpaired. Nothing was deleted from the relay or your other devices.");
         }
     }
     Ok(())

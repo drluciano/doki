@@ -14,7 +14,9 @@ path = "src/main.rs"
 doki-core.workspace = true
 doki-engine.workspace = true
 doki-vault.workspace = true
+doki-sync.workspace = true
 clap.workspace = true
 
 [dev-dependencies]
+doki-relay.workspace = true
 tempfile.workspace = true

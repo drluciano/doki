@@ -12,7 +12,7 @@ Status: the local safety engine is implemented in `crates/` (Rust workspace) and
 - `crates/doki-cli` (built): the `doki` command, used for testing and power users until the app exists.
 - `packages/emulator_profiles` (planned): versioned declarative discovery, bundle membership and compatibility rules. No arbitrary downloaded executable plugins in the initial release. Until then every bundle uses the `generic-folder` profile (all files in the chosen folder).
 - `packages/inspectors` (planned): optional format validators and human-readable save metadata; no generic binary merge promise.
-- `services/relay` (planned): small self-hostable, authenticated store-and-forward service carrying the handoff package contents. Hosting and encryption design require an accepted architecture decision before implementation.
+- `crates/doki-relay` (built): small self-hostable store-and-forward server for encrypted handoff packages. `crates/doki-sync` (built) is the client: pairing codes, end-to-end encryption, sync. Per-device keys and revocation (S01) are required before internet-facing release.
 - `docs`: architecture decisions, contracts, schemas, threat model, contributor guide, user help and recovery procedures.
 
 Flutter/Rust interoperability, packaging complexity, platform capabilities and team maintenance cost must be measured in a spike before this stack becomes final. Keep generated binding code distinct and document ownership and error conversion.

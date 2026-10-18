@@ -184,8 +184,9 @@ No platform claim is made beyond this table. Supported emulators are listed only
 
 ## 10. Transport
 
-- The first transport is a **handoff package** file the user moves themselves (format in `crates/doki-engine/src/package.rs`). It carries checkpoints, objects and offers; it is not yet encrypted or signed, so it must not travel over untrusted channels.
-- The self-hostable relay is next. It stores encrypted objects and signed metadata, never decides which save wins and never deletes on a device's behalf. Pairing, encryption and revocation follow S01 before any internet-facing use.
+- **Handoff package file**: one file the user moves themselves, carrying checkpoints, objects and offers (format in `crates/doki-engine/src/package.rs`). Not encrypted; for trusted channels only.
+- **Relay** (`crates/doki-relay`, client in `crates/doki-sync`): stores the same packages, sealed on the device with XChaCha20-Poly1305 under a key derived from the pairing secret, so the relay never sees save bytes or names. It never decides which save wins, never deletes on a device's behalf, and expires packages after its retention period; expiry is not deletion. Receiving through the relay is the same import as a file (5.1): vault only.
+- Interim limit: paired devices share one secret, so revoking one device means re-pairing the rest (see [relay.md](../relay.md)). S01 replaces this before internet-facing release.
 - Sync is not an independent backup.
 
 ## 11. Error identifiers
@@ -223,6 +224,8 @@ No platform claim is made beyond this table. Supported emulators are listed only
 | Vault (objects, checkpoints, records, locks) | `crates/doki-vault` | `src/tests.rs` |
 | Save-folder adapter and fault injection | `crates/doki-platform` | `local.rs` tests |
 | Capture, review, install, recovery, packages | `crates/doki-engine` | `src/tests.rs`: crash at every install step with Finish and Put back, I/O failure at every folder write, crash during recovery, rescue of files written mid-recovery, tampered and truncated packages |
-| Command line | `crates/doki-cli` | `tests/handoff.rs`: the end-to-end milestone |
+| Relay server | `crates/doki-relay` | auth, listing, expiry, size limits |
+| Relay client, pairing, encryption | `crates/doki-sync` | wrong key, tampering, relay stores only ciphertext, two-device handoff |
+| Command line | `crates/doki-cli` | `tests/handoff.rs`: the end-to-end milestone, by file and by relay |
 
-Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter, the relay, and checkpoint cleanup (C06).
+Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter, per-device relay keys, and checkpoint cleanup (C06).

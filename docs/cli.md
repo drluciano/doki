@@ -16,7 +16,7 @@ doki capture "Emerald" --closed
 doki send "Emerald" -o emerald.dokipkg
 ```
 
-Move `emerald.dokipkg` to the other device any way you like. There:
+Move `emerald.dokipkg` to the other device any way you like, or pair both devices with a relay and run `doki sync` instead (see [relay.md](relay.md)). There:
 
 ```sh
 doki init --name Odin
@@ -56,6 +56,10 @@ doki use "Emerald" <checkpoint>       # shows the review, asks, then backs up an
 | `pin` / `unpin GAME CP` | Protect a checkpoint from future cleanup | No |
 | `export-files GAME CP FOLDER` | Copy a checkpoint's files out of Doki | No (writes FOLDER) |
 | `clean` | Remove temporary leftovers, never checkpoints | No |
+| `relay create URL` | Start a space on a relay and pair this device | No |
+| `relay join CODE` | Pair this device with the code from another | No |
+| `relay code` / `relay forget` | Show the pairing code / unpair | No |
+| `sync` | Send changed saves to the relay and receive others' | No |
 
 Checkpoint arguments accept any unique prefix of the id shown.
 

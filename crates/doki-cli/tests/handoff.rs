@@ -116,3 +116,40 @@ fn errors_say_what_is_protected() {
     let err = String::from_utf8_lossy(&out.stderr);
     assert!(err.contains("[BundleIncomplete]") && err.contains("Nothing was captured"), "{err}");
 }
+
+#[test]
+fn hand_off_through_a_relay() {
+    let tmp = tempfile::tempdir().unwrap();
+    let relay = doki_relay::Relay::bind(
+        doki_relay::RelayConfig::new(tmp.path().join("relay")),
+        "127.0.0.1:0",
+    )
+    .unwrap();
+    let url = format!("http://{}", relay.local_addr());
+    std::thread::spawn(move || relay.run());
+
+    let (pc, odin) = (tmp.path().join("pc"), tmp.path().join("odin"));
+    let (pc_save, odin_save) = (tmp.path().join("pc-save"), tmp.path().join("odin-save"));
+    fs::create_dir_all(&pc_save).unwrap();
+    fs::create_dir_all(&odin_save).unwrap();
+    ok(&pc, &["init", "--name", "PC"]);
+    ok(&odin, &["init", "--name", "Odin"]);
+
+    let created = ok(&pc, &["relay", "create", &url]);
+    let code = created.split("doki relay join ").nth(1).unwrap().split_whitespace().next().unwrap();
+    ok(&odin, &["relay", "join", code]);
+
+    ok(&pc, &["add", "Emerald", pc_save.to_str().unwrap()]);
+    fs::write(pc_save.join("emerald.sav"), b"gym 1").unwrap();
+    ok(&pc, &["capture", "Emerald", "--closed"]);
+    assert!(ok(&pc, &["sync"]).contains("Sent your current save of Emerald."));
+
+    let synced = ok(&odin, &["sync"]);
+    let bundle =
+        synced.split("--link ").nth(1).unwrap().split('`').next().unwrap().trim().to_owned();
+    ok(&odin, &["add", "Emerald", odin_save.to_str().unwrap(), "--link", &bundle]);
+    let incoming = ok(&odin, &["incoming"]);
+    let cp = incoming.split_whitespace().next().unwrap().to_owned();
+    ok(&odin, &["use", "Emerald", &cp, "--yes"]);
+    assert_eq!(fs::read(odin_save.join("emerald.sav")).unwrap(), b"gym 1");
+}

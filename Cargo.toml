@@ -23,3 +23,9 @@ humantime = "2"
 unicode-normalization = "0.1"
 clap = { version = "4", features = ["derive", "env"] }
 tempfile = "3"
+doki-relay = { path = "crates/doki-relay" }
+doki-sync = { path = "crates/doki-sync" }
+tiny_http = "0.12"
+ureq = "2"
+chacha20poly1305 = "0.10"
+hkdf = "0.12"
