@@ -5,6 +5,7 @@ import '../main.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/remote_games.dart';
 import 'add_game.dart';
 import 'game.dart';
 
@@ -49,7 +50,27 @@ class LibraryScreen extends StatelessWidget {
               icon: const Icon(Icons.add),
               label: const Text('Add game'),
             ),
-      body: state.games.isEmpty
+      body: state.games.isEmpty && state.unmapped.isNotEmpty
+          ? ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                ContentWidth(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const RemoteGamesSection(),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: addGame,
+                        icon: const Icon(Icons.create_new_folder_outlined),
+                        label: const Text('Add a different game'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : state.games.isEmpty
           ? EmptyState(
               icon: Icons.videogame_asset_outlined,
               title: 'No games yet',
@@ -68,7 +89,7 @@ class LibraryScreen extends StatelessWidget {
                   ContentWidth(
                     child: Column(
                       children: [
-                        if (state.unmapped.isNotEmpty || state.incoming.isNotEmpty)
+                        if (state.incoming.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: InkWell(
@@ -77,11 +98,12 @@ class LibraryScreen extends StatelessWidget {
                               child: StatusBanner(
                                 'Incoming progress is waiting',
                                 detail:
-                                    '${state.incoming.length + state.unmapped.length} to review. Nothing changes until you choose.',
+                                    '${state.incoming.length} to review. Nothing changes until you choose.',
                               ),
                             ),
                           ),
                         for (final g in state.games) GameCard(game: g),
+                        const RemoteGamesSection(),
                       ],
                     ),
                   ),

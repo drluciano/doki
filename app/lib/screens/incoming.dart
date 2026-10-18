@@ -4,6 +4,7 @@ import '../copy.dart';
 import '../main.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/remote_games.dart';
 import 'add_game.dart';
 import 'review.dart';
 
@@ -49,9 +50,7 @@ class IncomingScreen extends StatelessWidget {
                               ),
                               leading: GameBadge(u.nameHint, size: 40),
                               title: Text(u.nameHint),
-                              subtitle: Text(
-                                'Arrived from ${u.fromDevice}. Set up where it saves on this device.',
-                              ),
+                              subtitle: Text(remoteGameLine(u)),
                               trailing: const Icon(Icons.chevron_right),
                               onTap: () => Navigator.push(
                                 context,

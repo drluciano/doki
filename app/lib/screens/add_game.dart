@@ -5,6 +5,7 @@ import '../main.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/remote_games.dart';
 
 /// Register a save folder. Connecting only records where the save lives; it
 /// never changes files. [link] sets up a game received from another device.
@@ -18,6 +19,7 @@ class AddGameScreen extends StatefulWidget {
 
 class _AddGameScreenState extends State<AddGameScreen> {
   late final _name = TextEditingController(text: widget.link?.nameHint ?? '');
+  late Unmapped? _link = widget.link;
   PickedFolder? _folder;
   bool _busy = false;
 
@@ -42,7 +44,7 @@ class _AddGameScreenState extends State<AddGameScreen> {
       await state.backend.call('add', {
         'name': name,
         'location': _folder!.location,
-        if (widget.link != null) 'link': widget.link!.gameId,
+        if (_link != null) 'link': _link!.gameId,
       });
       await state.refresh();
       return true;
@@ -55,7 +57,7 @@ class _AddGameScreenState extends State<AddGameScreen> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final link = widget.link;
+    final link = _link;
     return Scaffold(
       appBar: AppBar(title: Text(link == null ? 'Add game' : 'Set up ${link.nameHint}')),
       body: SingleChildScrollView(
@@ -67,10 +69,34 @@ class _AddGameScreenState extends State<AddGameScreen> {
             children: [
               if (link != null) ...[
                 StatusBanner(
-                  'Progress arrived from ${link.fromDevice}',
-                  detail: 'Choose where this game saves on this device. The received save waits in Incoming until you review it.',
+                  link.hasProgress
+                      ? 'Progress arrived from ${link.fromDevice}'
+                      : 'Already set up on ${link.fromDevice}',
+                  detail: link.hasProgress
+                      ? 'Choose where this game saves on this device. The received save waits in Incoming until you review it.'
+                      : 'Choose where this game saves on this device. From then on, progress on either device shows up on the other for review.',
                 ),
+                if (widget.link == null)
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _link = null;
+                      _name.clear();
+                    }),
+                    child: const Text('Add a different game instead'),
+                  ),
                 const SizedBox(height: 24),
+              ] else ...[
+                RemoteGamesSection(
+                  onPicked: (u) => setState(() {
+                    _link = u;
+                    _name.text = u.nameHint;
+                  }),
+                ),
+                if (AppScope.of(context).unmapped.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text('Or add a different game', style: text.titleMedium),
+                  const SizedBox(height: 12),
+                ],
               ],
               TextField(
                 controller: _name,

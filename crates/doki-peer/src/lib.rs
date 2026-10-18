@@ -32,6 +32,10 @@
 //!    receiving engine compares ancestry when the user reviews it.
 //! 4. Import the other side's package. Importing only writes the vault:
 //!    received progress waits in Incoming and is never installed here.
+//!    Games the other side has set up but this one has not are listed for
+//!    setup (`Engine::note_remote_game`), even before they have progress.
+//! 5. Send one byte and wait for the other side's, so a finished sync means
+//!    both devices have imported.
 //!
 //! Framing: JSON messages as `u32` little-endian length + bytes; the package
 //! as `u64` length + bytes (length 0 when there is nothing to send).
@@ -155,6 +159,10 @@ struct Hello {
     book: PeerBook,
     /// Every checkpoint this device holds, by game.
     have: BTreeMap<BundleId, BTreeSet<CheckpointId>>,
+    /// Games set up on this device, with their names, so other devices can
+    /// offer them for setup before any checkpoint exists.
+    #[serde(default)]
+    games: BTreeMap<BundleId, String>,
 }
 
 /// Result of syncing with one device.
@@ -321,11 +329,13 @@ impl Ctx {
         for (id, cp) in engine.vault().checkpoints()? {
             have.entry(cp.bundle_id).or_default().insert(id);
         }
+        let games = engine.bundles()?.into_iter().map(|b| (b.bundle_id, b.name)).collect();
         Ok(Hello {
             name: engine.vault().device_name().to_owned(),
             addr: self.my_addr(),
             book: self.book()?,
             have,
+            games,
         })
     }
 
@@ -399,8 +409,7 @@ async fn read_msg<T: for<'de> Deserialize<'de>>(recv: &mut RecvStream) -> Result
 
 async fn write_package(send: &mut SendStream, bytes: &[u8]) -> Result<()> {
     send.write_all(&(bytes.len() as u64).to_le_bytes()).await.map_err(|e| net("sending", e))?;
-    send.write_all(bytes).await.map_err(|e| net("sending", e))?;
-    send.finish().map_err(|e| net("sending", e))
+    send.write_all(bytes).await.map_err(|e| net("sending", e))
 }
 
 async fn read_package(recv: &mut RecvStream) -> Result<Vec<u8>> {
@@ -427,7 +436,7 @@ async fn blocking<T: Send + 'static>(
     })?
 }
 
-/// Steps 1–4 of a sync session, identical on both sides.
+/// Steps 1–5 of a sync session, identical on both sides.
 async fn session(
     ctx: &Arc<Ctx>,
     peer: String,
@@ -445,7 +454,16 @@ async fn session(
         )));
     }
     let (p, name, addr, book) = (peer.clone(), theirs.name.clone(), theirs.addr, theirs.book);
-    blocking(ctx, move |c| c.merge(&p, &name, &addr, &book)).await?;
+    let games = theirs.games;
+    blocking(ctx, move |c| {
+        c.merge(&p, &name, &addr, &book)?;
+        let engine = c.engine()?;
+        for (game, game_name) in &games {
+            engine.note_remote_game(game, game_name, &name)?;
+        }
+        Ok(())
+    })
+    .await?;
 
     let have = theirs.have;
     let (count, package) = blocking(ctx, move |c| c.outgoing(&have)).await?;
@@ -460,6 +478,13 @@ async fn session(
     };
     let p = peer.clone();
     blocking(ctx, move |c| c.mark_synced(&p)).await?;
+    // Step 5: wait until both sides have imported, so a finished sync means
+    // the other device has the progress too.
+    let mut ack = [0u8; 1];
+    let (sent, got) = tokio::join!(send.write_all(b"k"), recv.read_exact(&mut ack));
+    sent.map_err(|e| net("sync", e))?;
+    got.map_err(|e| net("sync", e))?;
+    send.finish().map_err(|e| net("sync", e))?;
     Ok(SessionReport { peer, peer_name: theirs.name, sent: count, received: summary })
 }
 

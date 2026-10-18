@@ -77,6 +77,14 @@ pub struct UnmappedBundle {
     pub bundle_id: BundleId,
     pub name_hint: String,
     pub from_device: String,
+    /// Progress for it has arrived and waits in Incoming once it is set up.
+    /// False when another device only announced the game.
+    #[serde(default = "yes")]
+    pub has_progress: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 /// Why an install is running.

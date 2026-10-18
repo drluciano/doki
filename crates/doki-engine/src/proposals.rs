@@ -95,6 +95,7 @@ impl<P: LocationProvider> Engine<P> {
                     bundle_id: bundle.clone(),
                     name_hint: name_hint.to_owned(),
                     from_device: from_device.to_owned(),
+                    has_progress: true,
                 },
             )?,
         }
@@ -140,6 +141,35 @@ impl<P: LocationProvider> Engine<P> {
         self.vault
             .get_record(PROPOSALS, &Proposal::key(bundle, cp))?
             .ok_or_else(|| Error::NotFound("no incoming progress with that id".into()))
+    }
+
+    /// Record that another device has set up `bundle`, so it can be set up
+    /// here with one tap, before any progress for it exists. Returns whether
+    /// it is newly listed. Never touches playable files.
+    pub fn note_remote_game(
+        &self,
+        bundle: &BundleId,
+        name_hint: &str,
+        from_device: &str,
+    ) -> Result<bool> {
+        let set_up = self
+            .vault
+            .get_record::<crate::BundleRecord>(crate::records::BUNDLES, bundle.as_str())?
+            .is_some();
+        if set_up || self.vault.get_record::<UnmappedBundle>(UNMAPPED, bundle.as_str())?.is_some() {
+            return Ok(false);
+        }
+        self.vault.put_record(
+            UNMAPPED,
+            bundle.as_str(),
+            &UnmappedBundle {
+                bundle_id: bundle.clone(),
+                name_hint: name_hint.to_owned(),
+                from_device: from_device.to_owned(),
+                has_progress: false,
+            },
+        )?;
+        Ok(true)
     }
 
     /// Games seen in received data but not set up here yet.

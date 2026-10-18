@@ -27,7 +27,8 @@ Each sync with a device:
 1. Opens an end-to-end encrypted connection (QUIC through [iroh](https://iroh.computer)) and checks that the other device is in this device's book. Unknown devices are refused.
 2. Exchanges device books and the list of checkpoints each side has.
 3. Sends a handoff package (the same format as `doki send`) for each game whose current save the other device does not have, with its history.
-4. Imports what arrived into the vault. **Receiving never changes a save**: received progress waits in Incoming for you to review, exactly as with a handoff file (safety contract, section 5).
+4. Lists games the other device has set up and this one has not, so you can set them up here with one tap (Library → **On your other devices**), even before they have a checkpoint.
+5. Imports what arrived into the vault. **Receiving never changes a save**: received progress waits in Incoming for you to review, exactly as with a handoff file (safety contract, section 5).
 
 Devices reach each other directly on the same network. Across networks, iroh tries to connect them directly through NAT and otherwise forwards the encrypted traffic through a public relay run by n0 (iroh's maintainers), which cannot read it. Discovery of a device's current address also goes through n0's public service and reveals only device ids and network addresses.
 

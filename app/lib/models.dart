@@ -96,8 +96,13 @@ class Unmapped {
   Unmapped(Map<String, dynamic> json)
     : gameId = json['bundle_id'] as String,
       nameHint = json['name_hint'] as String,
-      fromDevice = json['from_device'] as String;
+      fromDevice = json['from_device'] as String,
+      hasProgress = json['has_progress'] as bool? ?? true;
   final String gameId, nameHint, fromDevice;
+
+  /// False when the other device only has the game set up, with no
+  /// checkpoint yet.
+  final bool hasProgress;
 }
 
 /// A review result. [json] must be passed back unchanged to `use`.

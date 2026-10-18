@@ -273,4 +273,42 @@ void main() {
       state.dispose();
     });
   });
+
+  testWidgets('a game set up on another device is set up here in one tap', (tester) async {
+    final view = tester.view
+      ..physicalSize = const Size(800, 2000)
+      ..devicePixelRatio = 1;
+    addTearDown(view.reset);
+    Map<String, dynamic>? added;
+    final handlers = ready([])
+      ..['unmapped'] = ((_) => added != null
+          ? []
+          : [
+              {
+                'bundle_id': 'b9',
+                'name_hint': 'Emerald',
+                'from_device': 'PC',
+                'has_progress': false,
+              },
+            ])
+      ..['add'] = ((args) {
+        added = args;
+        return {};
+      });
+    final backend = FakeBackend(handlers)
+      ..folder = const PickedFolder('content://saves/emerald', 'emerald');
+    await pump(tester, backend);
+    expect(find.text('On your other devices'), findsOneWidget);
+    expect(find.textContaining('Set up on PC'), findsOneWidget);
+
+    await tester.tap(find.text('Emerald'));
+    await tester.pumpAndSettle();
+    expect(find.text('Already set up on PC'), findsOneWidget);
+    await tester.tap(find.text('Choose'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Connect folder'));
+    await tester.pumpAndSettle();
+    expect(added, {'name': 'Emerald', 'location': 'content://saves/emerald', 'link': 'b9'});
+    expect(find.text('On your other devices'), findsNothing);
+  });
 }

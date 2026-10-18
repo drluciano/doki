@@ -15,7 +15,7 @@
 //! | `init` | `name` | `{device_id, device_name}` |
 //! | `device` | – | `{device_id, device_name}` |
 //! | `games` | – | `[GameSummary]` |
-//! | `unmapped` | – | `[UnmappedBundle]` games received but not set up |
+//! | `unmapped` | – | `[UnmappedBundle]` games on other devices not set up here; `has_progress` says whether progress already arrived |
 //! | `add` | `name`, `location`, `link?` | `BundleRecord` |
 //! | `capture` | `game`, `note?` (caller confirms the game is closed) | `{outcome, checkpoint}` |
 //! | `history` | `game` | `[HistoryEntry]` |
