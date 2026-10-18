@@ -8,7 +8,8 @@
 //! atomic replacement must be evidenced per platform (see
 //! `docs/spec/safety-contract.md` section 9).
 //!
-//! This crate provides [`local::LocalDir`] for ordinary desktop folders and
+//! This crate provides [`local::LocalDir`] for ordinary desktop folders,
+//! [`member::MemberLocation`] for one game inside a whole-system folder and
 //! [`faults::FaultyLocation`] for fault-injection tests. The Android
 //! Storage Access Framework adapter lives behind the same trait.
 
@@ -18,6 +19,7 @@ use doki_core::{BundlePath, Result};
 
 pub mod faults;
 pub mod local;
+pub mod member;
 
 /// Whether an adapter can perform an operation with a given guarantee.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,6 +80,32 @@ pub trait SaveLocation {
     /// All regular files that form the bundle, sorted. Excludes Doki's
     /// staging area.
     fn list(&self) -> Result<Vec<BundlePath>>;
+
+    /// The files of [`SaveLocation::list`] that are inside the folder `dir`
+    /// (relative to the root), sorted. A missing `dir` is empty; a missing
+    /// root is still an error. Adapters override this when they can avoid
+    /// walking the whole root.
+    fn list_under(&self, dir: &BundlePath) -> Result<Vec<BundlePath>> {
+        let prefix = format!("{}/", dir.as_str());
+        Ok(self.list()?.into_iter().filter(|p| p.as_str().starts_with(&prefix)).collect())
+    }
+
+    /// Names directly inside the root, sorted, with a trailing `/` on
+    /// folders that contain files. Excludes Doki's staging. Used to discover
+    /// the games in a whole-system folder.
+    fn entries(&self) -> Result<Vec<String>> {
+        let mut out: Vec<String> = self
+            .list()?
+            .iter()
+            .map(|p| match p.as_str().split_once('/') {
+                Some((dir, _)) => format!("{dir}/"),
+                None => p.as_str().to_owned(),
+            })
+            .collect();
+        out.sort();
+        out.dedup();
+        Ok(out)
+    }
 
     fn open(&self, path: &BundlePath) -> Result<Box<dyn Read + '_>>;
 

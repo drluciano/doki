@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'art.dart';
 import 'backend.dart';
 import 'models.dart';
 
 /// What the app knows about the vault, refreshed from the engine after
 /// every action. Holds no state the engine does not also hold, apart from
-/// the open invitation and the outcome of the last sync.
+/// the open invitation, the outcome of the last sync and game art ([art],
+/// which lives only on this device).
 class AppState extends ChangeNotifier {
   /// With [autoSync], syncs with paired devices when the app opens, every
   /// [syncEvery] while it is open, and when it comes back to the
@@ -22,7 +24,8 @@ class AppState extends ChangeNotifier {
     this.syncEvery = const Duration(minutes: 2),
     this.autoCapture = false,
     this.checkEvery = const Duration(seconds: 15),
-  });
+    ArtStore? art,
+  }) : art = art ?? ArtStore.disabled();
 
   final DokiBackend backend;
   final bool autoSync;
@@ -30,11 +33,16 @@ class AppState extends ChangeNotifier {
   final bool autoCapture;
   final Duration checkEvery;
 
+  /// Covers and banners for games, and the SteamGridDB settings.
+  final ArtStore art;
+
   bool loaded = false;
   String? deviceName;
   List<Game> games = [];
   List<IncomingItem> incoming = [];
   List<Unmapped> unmapped = [];
+  List<SystemEntry> systems = [];
+  List<RemoteSystem> remoteSystems = [];
   List<Peer> peers = [];
 
   /// Pairing code of the optional self-hosted relay, if this device uses one.
@@ -68,6 +76,23 @@ class AppState extends ChangeNotifier {
 
   Game? game(String id) => games.where((g) => g.id == id).firstOrNull;
 
+  SystemEntry? system(String id) => systems.where((s) => s.id == id).firstOrNull;
+
+  /// Games found in the system [id], by name.
+  List<Game> gamesIn(String id) =>
+      games.where((g) => g.systemId == id).toList()
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+  /// Games whose folder was chosen on their own.
+  List<Game> get standaloneGames => games.where((g) => g.systemId == null).toList();
+
+  /// Games from other devices to offer for setup one by one: those that
+  /// belong to a system on the other device are set up with that system.
+  List<Unmapped> get unmappedGames {
+    final offered = {for (final r in remoteSystems) r.id};
+    return unmapped.where((u) => !offered.contains(u.systemId)).toList();
+  }
+
   Future<void> refresh() async {
     try {
       final device = await backend.call('device');
@@ -93,6 +118,14 @@ class AppState extends ChangeNotifier {
       unmapped = [
         for (final u in await backend.call('unmapped') as List) Unmapped(u as Map<String, dynamic>),
       ];
+      systems = [
+        for (final s in await backend.call('systems') as List)
+          SystemEntry(s as Map<String, dynamic>),
+      ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      remoteSystems = [
+        for (final r in await backend.call('remote_systems') as List)
+          RemoteSystem(r as Map<String, dynamic>),
+      ];
       // The first peer command also starts this device's peer node, so
       // paired devices can reach it while the app is open.
       peers = [
@@ -114,6 +147,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     _startAutoSync();
     _startAutoCapture();
+    unawaited(art.fetchMissing(games));
   }
 
   Future<void> init(String name) async {
@@ -184,11 +218,12 @@ class AppState extends ChangeNotifier {
     unawaited(_quietSync());
   }
 
-  /// Look for settled changes now. Refreshes when a checkpoint was taken,
-  /// and notifies about changes found and checkpoints saved as the user
-  /// chose in [settings].
+  /// Look for settled changes, and new games in system folders, now.
+  /// Refreshes when a checkpoint was taken or a game was found, and notifies
+  /// about changes found and checkpoints saved as the user chose in
+  /// [settings].
   Future<void> autoCheck() async {
-    if (!initialized || games.isEmpty || _checking) return;
+    if (!initialized || (games.isEmpty && systems.isEmpty) || _checking) return;
     _checking = true;
     try {
       final checks = (await backend.call('auto_check') as List).cast<Map<String, dynamic>>();
@@ -205,7 +240,10 @@ class AppState extends ChangeNotifier {
           await backend.notify(key, 'Checkpoint saved', '$name is protected up to now.');
         }
       }
-      if (checks.any((c) => c['outcome'] == 'created')) await refresh();
+      final known = {for (final g in games) g.id};
+      if (checks.any((c) => c['outcome'] == 'created' || !known.contains(c['bundle_id']))) {
+        await refresh();
+      }
     } catch (_) {
       // Per-game problems already show as the game's status.
     } finally {

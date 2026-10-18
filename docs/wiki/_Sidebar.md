@@ -2,6 +2,8 @@
 
 **Using Doki**
 - [Getting started](Getting-Started.md)
+- [Tracking a whole emulator](Tracking-a-Whole-Emulator.md)
+- [Game art](Game-Art.md)
 - [Pairing your devices](Pairing-Devices.md)
 - [Reviewing incoming progress](Reviewing-Incoming-Progress.md)
 - [History and restoring](History-and-Restoring.md)

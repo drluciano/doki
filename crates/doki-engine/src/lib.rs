@@ -31,6 +31,7 @@ mod manage;
 mod package;
 mod proposals;
 pub mod records;
+mod systems;
 
 pub use cleanup::{Removal, SettingsChanges, KEEP_NEWEST};
 pub use install::{FileState, RecoveryAction, RecoveryOutcome, RecoveryStatus, UseOutcome};
@@ -38,8 +39,10 @@ pub use manage::{AutoCheck, AutoOutcome, BundleChanges};
 pub use package::{ImportSummary, PACKAGE_FORMAT};
 pub use proposals::{Review, ReviewItem};
 pub use records::{
-    BundleRecord, ForgottenGame, Journal, Proposal, ProposalStatus, Settings, UnmappedBundle,
+    BundleRecord, ForgottenGame, Journal, MemberKind, MemberRef, Proposal, ProposalStatus,
+    RemoteSystem, Settings, SystemRecord, UnmappedBundle,
 };
+pub use systems::SystemChanges;
 
 use records::{BUNDLES, JOURNALS};
 
@@ -169,6 +172,7 @@ impl<P: LocationProvider> Engine<P> {
             pins: Default::default(),
             created_at: now_rfc3339(),
             auto_capture: true,
+            member: None,
         };
         self.vault.put_record(BUNDLES, record.bundle_id.as_str(), &record)?;
         self.vault.delete_record(records::UNMAPPED, record.bundle_id.as_str())?;
@@ -197,6 +201,16 @@ impl<P: LocationProvider> Engine<P> {
             1 => Ok(matches.into_iter().next().unwrap()),
             0 => Err(Error::NotFound(format!("no game matches {query:?}"))),
             _ => Err(Error::InvalidInput(format!("{query:?} matches several games"))),
+        }
+    }
+
+    /// The save location of a set-up game: its own folder, or its part of a
+    /// whole-system folder.
+    pub(crate) fn open_bundle(&self, record: &BundleRecord) -> Box<dyn SaveLocation + '_> {
+        let folder = self.provider.open(&record.location);
+        match &record.member {
+            Some(m) => Box::new(doki_platform::member::MemberLocation::new(folder, m.member())),
+            None => folder,
         }
     }
 
@@ -279,7 +293,7 @@ impl<P: LocationProvider> Engine<P> {
         note: Option<String>,
     ) -> Result<CaptureOutcome> {
         let mut record = self.bundle(bundle)?;
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(&record);
         location.check_available()?;
         let files = self.copy_stable(location.as_ref())?;
         if files.is_empty() {
@@ -331,7 +345,7 @@ impl<P: LocationProvider> Engine<P> {
     /// `None` when the folder cannot be read.
     pub fn has_uncaptured_changes(&self, bundle: &BundleId) -> Result<bool> {
         let record = self.bundle(bundle)?;
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(&record);
         let files = self.scan(location.as_ref())?;
         Ok(match &record.head {
             Some(head) => self.vault.checkpoint(head)?.files_digest() != FilesDigest::of(&files),

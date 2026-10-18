@@ -8,7 +8,8 @@
 //! # Requests
 //!
 //! Every request is an object with a `cmd` field. `game` accepts a game id,
-//! id prefix or exact name; `checkpoint` accepts a unique id prefix.
+//! id prefix or exact name; `system` the same for a whole-system folder;
+//! `checkpoint` accepts a unique id prefix.
 //!
 //! | `cmd` | Fields | Result |
 //! |---|---|---|
@@ -20,7 +21,14 @@
 //! | `capture` | `game`, `note?` (caller confirms the game is closed) | `{outcome, checkpoint}` |
 //! | `edit` | `game`, `name?`, `location?`, `auto_capture?` | `BundleRecord`; never touches save files |
 //! | `remove` | `game` | `null`; this device only, history and save folder kept |
-//! | `auto_check` | `settle_secs?` (default 30) | `[{bundle_id, name, outcome, …}]`, see `Engine::auto_check` |
+//! | `auto_check` | `settle_secs?` (default 30) | `[{bundle_id, name, outcome, …}]`, see `Engine::auto_check`; adds new games in systems first |
+//! | `systems` | – | `[SystemRecord]` whole-system folders; their games are in `games` with `game.member.system_id` set |
+//! | `add_system` | `name`, `location`, `link?` | `SystemRecord`; adds the games already in the folder |
+//! | `edit_system` | `system`, `name?`, `location?`, `auto_capture?` | `SystemRecord`; never touches save files |
+//! | `remove_system` | `system` | `null`; this device only, history and save folder kept |
+//! | `scan_systems` | – | `[BundleRecord]` games newly found in system folders |
+//! | `track_again` | `system`, `key` (from `SystemRecord.ignored`) | `[BundleRecord]` |
+//! | `remote_systems` | – | `[RemoteSystem]` systems on other devices not set up here |
 //! | `history` | `game` | `[HistoryEntry]` |
 //! | `incoming` | – | `[ReviewItem]` |
 //! | `review` | `game`, `checkpoint` | `Review` (pass back unchanged to `use`) |
@@ -67,7 +75,7 @@ const AUTO_SETTLE_SECS: u64 = 30;
 
 use doki_core::{BundleId, CaptureMode, CheckpointId, Error, Result};
 use doki_engine::{
-    BundleChanges, Engine, LocationProvider, RecoveryAction, Review, SettingsChanges,
+    BundleChanges, Engine, LocationProvider, RecoveryAction, Review, SettingsChanges, SystemChanges,
 };
 use doki_peer::{Network, PeerNode};
 use doki_vault::Vault;
@@ -104,6 +112,27 @@ enum Request {
     AutoCheck {
         settle_secs: Option<u64>,
     },
+    Systems,
+    AddSystem {
+        name: String,
+        location: String,
+        link: Option<String>,
+    },
+    EditSystem {
+        system: String,
+        name: Option<String>,
+        location: Option<String>,
+        auto_capture: Option<bool>,
+    },
+    RemoveSystem {
+        system: String,
+    },
+    ScanSystems,
+    TrackAgain {
+        system: String,
+        key: String,
+    },
+    RemoteSystems,
     History {
         game: String,
     },
@@ -281,6 +310,26 @@ fn dispatch<P: LocationProvider>(vault_path: &str, provider: P, req: Request) ->
         Request::AutoCheck { settle_secs } => to_value(
             engine.auto_check(Duration::from_secs(settle_secs.unwrap_or(AUTO_SETTLE_SECS)))?,
         ),
+        Request::Systems => to_value(engine.systems()?),
+        Request::AddSystem { name, location, link } => {
+            let link = link.map(|l| BundleId::parse(&l)).transpose()?;
+            to_value(engine.add_system(&name, &location, link)?)
+        }
+        Request::EditSystem { system, name, location, auto_capture } => {
+            to_value(engine.update_system(
+                &engine.find_system(&system)?.system_id,
+                SystemChanges { name, location, auto_capture },
+            )?)
+        }
+        Request::RemoveSystem { system } => {
+            engine.remove_system(&engine.find_system(&system)?.system_id)?;
+            Ok(Value::Null)
+        }
+        Request::ScanSystems => to_value(engine.scan_systems()?),
+        Request::TrackAgain { system, key } => {
+            to_value(engine.track_again(&engine.find_system(&system)?.system_id, &key)?)
+        }
+        Request::RemoteSystems => to_value(engine.remote_systems()?),
         Request::History { game: g } => to_value(engine.history(&game(&g)?)?),
         Request::Incoming => to_value(engine.incoming()?),
         Request::Review { game: g, checkpoint } => {

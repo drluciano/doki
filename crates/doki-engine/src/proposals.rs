@@ -99,6 +99,7 @@ impl<P: LocationProvider> Engine<P> {
                     name_hint: name_hint.to_owned(),
                     from_device: from_device.to_owned(),
                     has_progress: true,
+                    member: self.unmapped_member(bundle)?,
                 },
             )?,
         }
@@ -173,14 +174,21 @@ impl<P: LocationProvider> Engine<P> {
                 name_hint: name_hint.to_owned(),
                 from_device: from_device.to_owned(),
                 has_progress: false,
+                member: None,
             },
         )?;
         Ok(true)
     }
 
     /// Games seen in received data but not set up here yet.
+    /// Games of a system the user stopped tracking here are left out.
     pub fn unmapped_bundles(&self) -> Result<Vec<UnmappedBundle>> {
-        Ok(self.vault.list_records(UNMAPPED)?.into_iter().map(|(_, u)| u).collect())
+        let ignored = self.ignored_members()?;
+        Ok(self
+            .unmapped_bundles_raw()?
+            .into_iter()
+            .filter(|u| !ignored.contains(&u.bundle_id))
+            .collect())
     }
 
     /// Proposals waiting for review, across set-up games.
@@ -218,7 +226,7 @@ impl<P: LocationProvider> Engine<P> {
         self.vault.verify_checkpoint_objects(&incoming_checkpoint)?;
 
         let mut record = self.bundle(bundle)?;
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(&record);
         location.check_available()?;
         let live = self.scan(location.as_ref())?;
         let head_digest = match &record.head {

@@ -64,10 +64,18 @@ Map<String, dynamic> checkpoint({
   'note': ?note,
 };
 
-Map<String, dynamic> game(String status, {int incoming = 0, String? head = 'c1'}) => {
+Map<String, dynamic> game(
+  String status, {
+  int incoming = 0,
+  String? head = 'c1',
+  String id = 'b1',
+  String name = 'Emerald',
+  String? system,
+}) => {
   'game': {
-    'bundle_id': 'b1',
-    'name': 'Emerald',
+    'bundle_id': id,
+    'name': name,
+    if (system != null) 'member': {'system_id': system, 'kind': 'folder', 'name': name},
     'location': '/saves/emerald',
     'profile': {'id': 'generic-folder', 'version': 1},
     'head': head,

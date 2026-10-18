@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'appearance.dart';
+import 'art.dart';
 import 'backend.dart';
 import 'motion.dart';
 import 'screens/devices.dart';
@@ -22,7 +23,8 @@ import 'widgets/focus_halo.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final backend = await DokiBackend.forPlatform();
-  final state = AppState(backend, autoSync: true, autoCapture: true)..refresh();
+  final art = await ArtStore.open();
+  final state = AppState(backend, autoSync: true, autoCapture: true, art: art)..refresh();
   if (Platform.isWindows) {
     // "Sync now" in the tray menu (windows/runner/flutter_window.cpp).
     const MethodChannel('dev.doki/window').setMethodCallHandler((call) async {

@@ -30,6 +30,8 @@ Map<String, dynamic Function(Map<String, dynamic>)> ready(List<Map<String, dynam
   'games': (_) => games,
   'incoming': (_) => [],
   'unmapped': (_) => [],
+  'systems': (_) => [],
+  'remote_systems': (_) => [],
   'peer_list': (_) => [],
   'relay_code': (_) => null,
   'settings': (_) => {
@@ -55,6 +57,8 @@ void main() {
       'games': (_) => [],
       'incoming': (_) => [],
       'unmapped': (_) => [],
+      'systems': (_) => [],
+      'remote_systems': (_) => [],
       'peer_list': (_) => [],
       'relay_code': (_) => null,
     });
