@@ -39,6 +39,9 @@ class _Cards extends StatelessWidget {
           ),
         FilledButton(onPressed: () {}, child: const Text('Create checkpoint')),
         const FilledButton(onPressed: null, child: Text('Disabled')),
+        const TextField(
+          decoration: InputDecoration(labelText: 'Device name', helperText: 'Any name'),
+        ),
       ],
     ),
   );
@@ -141,6 +144,39 @@ void main() {
     expect(find.text('Emerald page'), findsOneWidget);
     expect(halo(tester).targetRect, isNull, reason: 'nothing on the new screen is under the mouse');
     expect(halo(tester).haloRect, isNull);
+  });
+
+  testWidgets('the border follows each control\'s own corners', (tester) async {
+    await tester.pumpWidget(harness());
+    final mouse = await mouseAt(tester, tester.getCenter(find.text('Emerald')));
+    await tester.pumpAndSettle();
+    expect(halo(tester).targetRadius, moreOrLessEquals(20 + 4), reason: 'card corner');
+
+    await mouse.moveTo(tester.getCenter(find.text('Create checkpoint')));
+    await tester.pumpAndSettle();
+    final button = tester.getRect(find.byType(FilledButton).first);
+    expect(halo(tester).targetRadius, moreOrLessEquals(button.height / 2 + 4), reason: 'pill');
+
+    await mouse.moveTo(tester.getCenter(find.text('Device name')));
+    await tester.pumpAndSettle();
+    expect(halo(tester).targetRadius, moreOrLessEquals(16 + 4), reason: 'field corner');
+    final field = tester.getRect(find.byType(InputDecorator));
+    final outline = halo(tester).targetRect!.deflate(4);
+    expect(outline.top, moreOrLessEquals(field.top, epsilon: 0.5));
+    expect(outline.bottom, lessThan(field.bottom), reason: 'helper text is outside the border');
+  });
+
+  testWidgets('a focused text field gets its own corners too', (tester) async {
+    await tester.pumpWidget(harness());
+    for (var i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    }
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasPrimaryFocus,
+      isTrue,
+    );
+    expect(halo(tester).targetRadius, moreOrLessEquals(16 + 4));
   });
 
   testWidgets('switching tabs fades through and keeps each page', (tester) async {

@@ -160,6 +160,11 @@ class FocusHaloState extends State<FocusHalo>
   Rect? get targetRect => _visible ? _targetRect : null;
   Rect? _targetRect;
 
+  /// The corner radius the border is heading to, or null when hidden.
+  @visibleForTesting
+  double? get targetRadius => _visible ? _targetRadius : null;
+  double? _targetRadius;
+
   @override
   void initState() {
     super.initState();
@@ -275,12 +280,14 @@ class FocusHaloState extends State<FocusHalo>
   RenderBox? _controlAt(Offset position) {
     final result = HitTestResult();
     WidgetsBinding.instance.hitTestInView(result, position, View.of(context).viewId);
+    var inField = false;
     for (final entry in result.path) {
       final target = entry.target;
+      if (target is RenderEditable) inField = true;
       if (target is RenderSemanticsAnnotations &&
           (target.properties.onTap != null || target.properties.onLongPress != null) &&
           target.hasSize) {
-        return target;
+        return inField ? _fieldOutline(target) ?? target : target;
       }
     }
     return null;
@@ -297,12 +304,14 @@ class FocusHaloState extends State<FocusHalo>
     if (node == null || node is FocusScopeNode || context is! Element || !context.mounted) {
       return null;
     }
-    // A text field is focused inside its decoration; outline the whole field.
+    // A text field is focused inside its decoration; outline the field's
+    // own border, not its helper text.
     RenderObject? box;
     var depth = 0;
     context.visitAncestorElements((e) {
       if (e.widget is InputDecorator) {
-        box = e.renderObject;
+        final decorator = e.renderObject;
+        box = decorator is RenderBox ? _fieldOutline(decorator) ?? decorator : null;
         return false;
       }
       return ++depth < 24;
@@ -310,6 +319,92 @@ class FocusHaloState extends State<FocusHalo>
     box ??= context.findRenderObject();
     return box is RenderBox ? box as RenderBox : null;
   }
+
+  /// The box a text field paints its border on: the first custom-painted box
+  /// with a foreground painter inside the field's decoration. Remembered so
+  /// its corners come from the theme's field border.
+  RenderBox? _fieldOutline(RenderBox field) {
+    RenderBox? found;
+    void visit(RenderObject o, int depth) {
+      if (found != null || depth > 10) return;
+      if (o is RenderCustomPaint && o.foregroundPainter != null && o.hasSize) {
+        found = o;
+        return;
+      }
+      o.visitChildren((c) => visit(c, depth + 1));
+    }
+
+    visit(field, 0);
+    if (found != null) _fieldOutlines[found!] = true;
+    return found;
+  }
+
+  final _fieldOutlines = Expando<bool>('field outline');
+
+  /// The corner radius the control itself is drawn with, so the border
+  /// follows its shape: pill buttons get a pill, cards their card corner,
+  /// text fields their field corner. Looks at the control and at the
+  /// same-sized shapes just around and inside it (the Material a button or
+  /// card is made of, a decorated box). Null when no shape is found.
+  double? _cornerRadius(RenderBox box) {
+    final size = box.size;
+    bool sameSize(RenderObject o) =>
+        o is RenderBox &&
+        o.hasSize &&
+        (o.size.width - size.width).abs() <= 1.5 &&
+        (o.size.height - size.height).abs() <= 1.5;
+
+    if (_fieldOutlines[box] == true) {
+      final border = Theme.of(context).inputDecorationTheme.border;
+      return border is OutlineInputBorder ? _fromBorderRadius(border.borderRadius, size) : 0;
+    }
+    var depth = 0;
+    for (RenderObject? o = box; o != null && depth < 10 && sameSize(o); o = o.parent, depth++) {
+      final r = _radiusOf(o, size);
+      if (r != null) return r;
+    }
+    double? inside;
+    void visit(RenderObject o, int depth) {
+      if (inside != null || depth > 8 || !sameSize(o)) return;
+      inside = _radiusOf(o, size);
+      o.visitChildren((c) => visit(c, depth + 1));
+    }
+
+    box.visitChildren((c) => visit(c, 1));
+    return inside;
+  }
+
+  static double? _radiusOf(RenderObject o, Size size) {
+    ShapeBorder? shape;
+    if (o is RenderPhysicalShape && o.clipper is ShapeBorderClipper) {
+      shape = (o.clipper! as ShapeBorderClipper).shape;
+    } else if (o is RenderClipPath && o.clipper is ShapeBorderClipper) {
+      shape = (o.clipper! as ShapeBorderClipper).shape;
+    } else if (o is RenderPhysicalModel) {
+      return o.shape == BoxShape.circle
+          ? size.shortestSide / 2
+          : _fromBorderRadius(o.borderRadius ?? BorderRadius.zero, size);
+    } else if (o is RenderClipRRect) {
+      return _fromBorderRadius(o.borderRadius, size);
+    } else if (o is RenderDecoratedBox) {
+      final d = o.decoration;
+      if (d is ShapeDecoration) {
+        shape = d.shape;
+      } else if (d is BoxDecoration) {
+        if (d.shape == BoxShape.circle) return size.shortestSide / 2;
+        if (d.borderRadius != null) return _fromBorderRadius(d.borderRadius!, size);
+      }
+    }
+    return switch (shape) {
+      StadiumBorder() || CircleBorder() => size.shortestSide / 2,
+      RoundedRectangleBorder(:final borderRadius) => _fromBorderRadius(borderRadius, size),
+      RoundedSuperellipseBorder(:final borderRadius) => _fromBorderRadius(borderRadius, size),
+      _ => null,
+    };
+  }
+
+  static double _fromBorderRadius(BorderRadiusGeometry r, Size size) =>
+      math.min(r.resolve(TextDirection.ltr).topLeft.x, size.shortestSide / 2);
 
   _Placement? _measure(RenderBox? box) {
     final me = context.findRenderObject();
@@ -334,9 +429,13 @@ class FocusHaloState extends State<FocusHalo>
       ).inflate(_gap + 2);
     }
     if (!clip.overlaps(rect)) return null;
-    // Pills stay pills; cards and rows get the card corner.
+    // Follow the control's own corners, scaled like the control is, and sit
+    // concentric with them. Controls with no readable shape (navigation
+    // items) get a pill when small and the card corner when large.
+    final scale = rect.width / box.size.width;
+    final own = _cornerRadius(box);
     final shortest = rect.shortestSide;
-    final radius = (shortest <= 56 ? shortest / 2 : 20.0) + _gap;
+    final radius = (own != null ? own * scale : (shortest <= 56 ? shortest / 2 : 20.0)) + _gap;
     return _Placement(rect.inflate(_gap), clip, radius);
   }
 
@@ -367,6 +466,7 @@ class FocusHaloState extends State<FocusHalo>
     final reduced = DokiMotion.reduced(context);
     final place = _choose();
     _targetRect = place?.rect;
+    _targetRadius = place?.radius;
     if (place != null) {
       if (!_visible && _frame.opacity < 0.05) {
         // Appearing from nothing: start a little larger and shrink in.
