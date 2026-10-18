@@ -26,8 +26,10 @@ jobs:
         with:
           gradle-version: '8.11.1'
           cache-disabled: true
-      - name: Provision pinned SDK packages on hosted runner
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Verify hosted runner SDK baseline
+        run: |
+          test -f "$ANDROID_HOME/platforms/android-35/android.jar"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/aapt2"
       - name: Compile debug APK and lint probe only
         run: gradle --no-daemon --console=plain :app:assembleDebug :app:lintDebug
       - name: Upload debug APK (test only)
