@@ -7,7 +7,7 @@ android {
         applicationId 'dev.doki.safprobe'
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName '0.1-research'
+        versionCode 2
+        versionName '0.2-research'
     }
 }

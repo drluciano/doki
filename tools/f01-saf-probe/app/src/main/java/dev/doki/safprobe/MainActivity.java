@@ -21,6 +21,8 @@ public final class MainActivity extends Activity {
     private static final int PICK = 1;
     private TextView result;
     private Button choose;
+    private Button recheck;
+    private Button forget;
     private final Handler main = new Handler(Looper.getMainLooper());
     private volatile boolean destroyed;
     private CancellationSignal active;
@@ -57,7 +59,11 @@ public final class MainActivity extends Activity {
         });
         layout.addView(result);
         layout.addView(choose);
-        Button forget = new Button(this);
+        recheck = new Button(this);
+        recheck.setText("Recheck remembered folder (no picker)");
+        recheck.setOnClickListener(v -> recheckRememberedFolder());
+        layout.addView(recheck);
+        forget = new Button(this);
         forget.setText("Release probe's remembered grants");
         forget.setOnClickListener(v -> {
             try {
@@ -66,6 +72,7 @@ public final class MainActivity extends Activity {
                             | (p.isWritePermission() ? Intent.FLAG_GRANT_WRITE_URI_PERMISSION : 0);
                     getContentResolver().releasePersistableUriPermission(p.getUri(), flags);
                 }
+                getPreferences(MODE_PRIVATE).edit().remove("last_tree").apply();
                 result.setText("Remembered grants released. This did not modify selected files.");
             } catch (RuntimeException ex) { result.setText("Could not release all grants. Use Android app settings."); }
         });
@@ -109,8 +116,47 @@ public final class MainActivity extends Activity {
                 }
             } catch (RuntimeException ignored) { /* Outcome shown without exception paths/IDs. */ }
         }
-        final boolean remembered = persisted;
+        if (persisted) {
+            // Private app storage keeps the last selected URI; never display or export it.
+            getPreferences(MODE_PRIVATE).edit().putString("last_tree", tree.toString()).apply();
+        } else {
+            // A new transient selection must not leave an older folder as the recheck target.
+            getPreferences(MODE_PRIVATE).edit().remove("last_tree").apply();
+        }
+        inspectFolder(tree, persisted, "Picker selection");
+    }
+
+    private void recheckRememberedFolder() {
+        String saved = getPreferences(MODE_PRIVATE).getString("last_tree", null);
+        if (saved == null) {
+            result.setText("No remembered folder. Choose a disposable folder first. No inspection performed.");
+            return;
+        }
+        try {
+            Uri tree = Uri.parse(saved);
+            if (!"content".equals(tree.getScheme()) || !DocumentsContract.isTreeUri(tree)) {
+                result.setText("Remembered folder is unavailable. Choose it again. No inspection performed.");
+                return;
+            }
+            boolean granted = false;
+            for (android.content.UriPermission permission : getContentResolver().getPersistedUriPermissions()) {
+                if (permission.getUri().equals(tree) && permission.isReadPermission()) granted = true;
+            }
+            if (!granted) {
+                result.setText("Remembered read grant is unavailable. Choose the folder again. No inspection performed.");
+                return;
+            }
+            inspectFolder(tree, true, "Remembered-folder recheck; no picker opened");
+        } catch (RuntimeException ex) {
+            result.setText("Remembered folder could not be checked. Choose it again. Details are redacted.");
+        }
+    }
+
+    private void inspectFolder(Uri tree, boolean remembered, String origin) {
+        if (active != null || destroyed) return;
         choose.setEnabled(false);
+        recheck.setEnabled(false);
+        forget.setEnabled(false);
         final CancellationSignal cancel = new CancellationSignal();
         active = cancel;
         result.setText("Inspecting metadata. Cancellation requested after five seconds; provider may ignore it. Rotation cancels this attempt; select again.");
@@ -139,11 +185,11 @@ public final class MainActivity extends Activity {
                     }
                     more = cursor.moveToNext();
                 }
-                message = "Read grant: yes. Persisted read grant observed: " + remembered
+                message = origin + ". Read grant: yes. Persisted read grant observed: " + remembered
                         + ". Immediate entries sampled: " + count + "; directories: " + directories
                         + "; file-write flags advertised: " + writeAdvertised + "; additional entries: " + more
                         + ". Advertised write capability was NOT exercised. No contents opened. "
-                        + "Persistence after reboot and device compatibility are untested.";
+                        + "This result covers this attempt only; reboot persistence needs a separate observed test.";
             } catch (RuntimeException ex) {
                 message = "Metadata inspection failed or timed out. Persisted read grant observed: "
                         + remembered + ". No contents opened. Provider errors are redacted.";
@@ -156,6 +202,8 @@ public final class MainActivity extends Activity {
                 activeTimeout = null;
                 result.setText(output);
                 choose.setEnabled(true);
+                recheck.setEnabled(true);
+                forget.setEnabled(true);
             });
         }, "metadata-probe").start();
     }

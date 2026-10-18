@@ -1,6 +1,6 @@
 # F01 read-only SAF probe
 
-Experimental native Java harness, not Doki. Hosted compilation and lint passed; it has not been installed or device-tested. Intended evidence target: owner-reported AYN Odin3 / Android 15 / Eden 0.2.1. No support claim follows from source inspection.
+Experimental native Java harness, not Doki. The original 0.1 probe passed hosted compile/lint and the owner reported initial on-device metadata access. Version 0.2 adds a remembered-folder recheck; its build and on-device checks are pending until separately evidenced. Intended evidence target: owner-reported AYN Odin3 / Android 15 / Eden 0.2.1. No support claim follows from source inspection.
 
 ## Hosted validation
 
@@ -50,3 +50,17 @@ Expected build artifact: `app/build/outputs/apk/debug/app-debug.apk`. The hosted
 - Retain read-only outcome evidence. Successful metadata access is not contents-read validation, coherent checkpoint capture, backup, apply, restore or F01 completion.
 
 API basis: [DocumentsContract](https://developer.android.com/reference/android/provider/DocumentsContract), [ContentResolver persisted grants](https://developer.android.com/reference/android/content/ContentResolver#takePersistableUriPermission(android.net.Uri,%20int)). Legacy Activity result callbacks are intentional to avoid adding AndroidX dependencies to this small harness.
+
+## Version 0.2: remembered-folder recheck
+
+After selecting a small disposable folder and granting access, choose **Recheck remembered folder (no picker)**. The probe checks the stored read grant and repeats the same bounded metadata query without requesting access again. The last successfully persisted tree URI is kept only in private, non-backed-up app preferences; it is not displayed, exported or logged. A transient replacement selection clears the previous recheck target. Release remembered grants removes the saved target on success. No file contents or writes are introduced.
+
+Owner-reported 0.1 result on AYN Odin 3 / Android 15 / Eden 0.2.1: APK installed/opened; Eden visible/selectable through the picker; post-selection result reported persisted grant true, one sampled entry, one directory, no file-write flags advertised and no additional entries. This is user-observed evidence, not an automated device test. A directory without file-write flags does not establish its create/write capabilities.
+
+For 0.2 device validation:
+1. Install the debug APK, select the same small disposable test folder, and capture the result without sharing names/paths.
+2. Close/reopen the probe and tap Recheck remembered folder. Record whether the metadata query succeeds without a picker.
+3. Reboot the device and repeat Recheck; report the observed result. Only this observation can support a reboot-persistence claim.
+4. Tap Release remembered grants, then Recheck; expect an explicit no-remembered-folder result and no query. Choose again to restore the test setup.
+
+CI debug signing keys can differ between builds. If Android rejects updating the old probe, uninstall only **Doki read-only probe** and install the new test APK; this resets the probe's grants/preferences, not Eden data. Select the test folder again before persistence checks. No device debugging or Eden save replacement is required.
