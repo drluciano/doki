@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../backend.dart';
 import '../copy.dart';
+import '../motion.dart';
 import '../theme.dart';
 
 /// Run an engine action, showing a persistent explanation if it fails.
@@ -81,7 +82,9 @@ class StatusBanner extends StatelessWidget {
     return Semantics(
       container: true,
       liveRegion: kind == BannerKind.error,
-      child: Container(
+      child: AnimatedContainer(
+        duration: DokiMotion.panel,
+        curve: DokiMotion.enter,
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
@@ -163,26 +166,29 @@ class EmptyState extends StatelessWidget {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 56, color: DokiColors.lavender),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                body,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: DokiColors.muted),
-              ),
-              if (action != null) ...[const SizedBox(height: 24), action!],
-            ],
+        child: Entrance(
+          rise: 16,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 56, color: DokiColors.lavender),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  body,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: DokiColors.muted),
+                ),
+                if (action != null) ...[const SizedBox(height: 24), action!],
+              ],
+            ),
           ),
         ),
       ),
