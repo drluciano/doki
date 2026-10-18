@@ -1,0 +1,66 @@
+name: Wiki
+# The wiki's source is docs/wiki. Pull requests check its links; pushes to
+# main publish it to the repository's GitHub wiki, replacing what is there.
+on:
+  pull_request:
+    paths:
+      - 'docs/wiki/**'
+      - 'tools/wiki.py'
+      - '.github/workflows/wiki.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/wiki/**'
+      - 'tools/wiki.py'
+      - '.github/workflows/wiki.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: wiki-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check links between wiki pages
+        run: python3 tools/wiki.py check docs/wiki
+
+  publish:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # pushing to the wiki repository
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Clone the wiki
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          if ! git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki-out; then
+            echo "::error::Could not clone the wiki. Enable Wiki in the repository settings and create any first page once, then re-run this workflow."
+            exit 1
+          fi
+      - name: Render pages
+        run: |
+          find wiki-out -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          python3 tools/wiki.py render docs/wiki wiki-out
+      - name: Publish
+        working-directory: wiki-out
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki already up to date."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Publish wiki from ${GITHUB_SHA::7}"
+          git push origin HEAD
