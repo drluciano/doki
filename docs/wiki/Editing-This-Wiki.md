@@ -9,4 +9,3 @@ The wiki's source lives in the main repository under [`docs/wiki`](https://githu
 - Use the words the app uses: Checkpoint, Incoming progress, Use this save, Restore a checkpoint, Separate progress. Keep internal terms (vault, head, bundle) out of player pages.
 - Do not claim a platform or emulator works until it has been verified on real hardware.
 
-The first publish needs the wiki to exist: enable **Wiki** in the repository settings and create any first page once. The workflow replaces it.

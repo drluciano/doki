@@ -1,16 +1,17 @@
-# Doki agent instructions
+# Instructions for coding agents
 
-Read docs/workflow.md and the selected issue. Consult docs/engineering.md, docs/spec/safety-contract.md and role guides only as relevant.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [safety contract](docs/spec/safety-contract.md) before changing code. [docs/engineering.md](docs/engineering.md) explains the modules; [docs/design.md](docs/design.md) the app's wording, look and motion.
 
-- Owner direction of 2026-10-18 in docs/workflow.md takes precedence over the rules below: build the MVP in incremental draft PRs without waiting on per-step approval; the owner merges.
+## How work is delivered
 
-- Default to one primary agent performing PM, design, engineering and coordination. Role names are responsibilities, not persistent workers. Use one independent PR Reviewer for a substantial ready PR; no other delegation unless explicitly requested or concretely justified.
-- The one-minute heartbeat is paused. Do not restart schedules, poll GitHub periodically or wake idle roles. Resume on owner input or actual results available in an active run.
-- Keep one engineering story active through owner acceptance, even after partial PR merges. Only the owner accepts/completes stories. Do not weaken criteria or auto-close issues.
-- Batch design/code/docs/checks into meaningful PRs. Keep intermediate notes local; avoid planning-only micro-PRs and repetitive handoffs.
-- Reviewer may mark ready and merge clean, technically passing PRs under standing owner authorization and repository rules. Technical PASS/merge is not human story acceptance. Shared identity permits readiness/merge; formal self-APPROVE is a different action.
-- Run relevant meaningful checks, preferably deterministic CI. Inspect changed state only; do not repeat unchanged checks/reviews or interpret missing evidence as passing.
-- Document public APIs, configuration, schemas, errors, state transitions and supported user workflows. Explain safety-critical ordering; keep comments useful.
-- Receiving a save never installs it. Preserve verified pre-apply backup, baseline recheck, immutable history and journaled recovery. No generic binary-merge or untested platform-support claims.
-- Keep personal saves, ROMs, credentials and identifying diagnostics out of the repository; use synthetic/licensed fixtures.
-- Preserve current work and compact handoff notes. Report only meaningful progress, failures or required owner actions; no repeated unchanged blocker reports.
+- Work in a branch and open a pull request that references its issue (`Refs #N`, not `Fixes #N`). The maintainer merges pull requests and closes issues.
+- Batch related code, docs and tests into one meaningful pull request rather than many small ones.
+- Run the checks in CONTRIBUTING.md before pushing. A check that did not run is not a pass.
+
+## Rules that protect saves
+
+- Receiving progress never installs it. Keep the verified backup before every replacement, the recheck against the review, immutable history and journaled recovery.
+- Any code that writes playable files goes through `crates/doki-engine/src/install.rs`, with a crash-point test for every new step.
+- Never claim a platform or emulator is supported without a real-device restore, and never describe two binary saves as mergeable.
+- Update the safety contract, the docs and the wiki (`docs/wiki`) in the same pull request as the behaviour they describe. Comments on safety-critical code explain why the order matters.
+- Keep real saves, ROMs, credentials and identifying diagnostics out of the repository; use synthetic fixtures.

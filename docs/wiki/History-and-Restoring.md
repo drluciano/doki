@@ -14,7 +14,8 @@ Open a game from **Library** to see its history, newest first. Each entry shows 
 | **Separate progress** | A version you set aside when you chose another one, or progress nobody continued from. Kept so you can go back to it. |
 | Backup before a change | The copy Doki verified before replacing your save. |
 | "Chose the save from … over …'s" | The record of a choice you made, so other devices do not ask again. |
-| New progress not in a checkpoint yet | You have played since the last checkpoint. Create one to protect it. |
+
+If the game's page says **New progress not in a checkpoint yet**, you have played since the last checkpoint and automatic checkpoints are off for this game; choose **Create checkpoint** to protect it.
 
 ## Restore a checkpoint
 

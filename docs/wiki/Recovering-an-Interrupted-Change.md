@@ -15,7 +15,7 @@ Doki will not create checkpoints or install anything else for that game until th
 - **Finish the change** puts the save you chose in place and checks it. You will see **Finished. The chosen save is now in place.**
 - **Put my save back** returns the save from before the change and checks it. You will see **Put back. Your save from before the change is in place.**
 
-Doki never decides for you. The one exception: if every file is already in place, it says **All files are already in place. Finish to record it.**
+Doki never decides for you. If every file is already in place, it says **All files are already in place. Finish to record it.**
 
 If something else wrote to the folder in the meantime (for example the emulator was opened), Doki saves those files as a checkpoint first, so nothing is lost either way.
 

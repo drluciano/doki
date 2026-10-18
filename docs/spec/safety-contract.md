@@ -1,8 +1,8 @@
 # Save-safety and recovery contract
 
-Status: **implemented for local folders** in `crates/` (see section 13). Android provider guarantees (section 9) still need device evidence from F01 [#12](https://github.com/drluciano/doki/issues/12). Choices that are defaults rather than owner decisions are marked **[default]** and listed in [open-questions.md](open-questions.md).
+This is the authoritative description of how Doki protects saves. It covers capture, incoming progress, install and rollback, retention and deletion; every state change and what happens if it is interrupted; the difference between integrity and validity; and what each platform does and does not guarantee. Where another document differs, this one wins, and it is updated in the same pull request as the behaviour it describes.
 
-This contract is the normative version of the rules in the owner's brief and in [engineering.md](../engineering.md). It covers F02 [#13](https://github.com/drluciano/doki/issues/13): capture, proposal, apply, rollback, retention and deletion invariants; every state transition and its outcome after interruption; integrity versus validity; and platform limits.
+Status: implemented in `crates/` and tested as listed in section 13. The Android folder guarantees in section 9 are implemented but have not yet been measured on real hardware.
 
 Normative words: MUST / MUST NOT / SHOULD as in RFC 2119.
 
@@ -116,7 +116,7 @@ Reviewable ── Use this save ──▶ Applied (install, section 6)
      └─ newer descendant arrives ▶ Superseded
 ```
 
-**[default]** Keep alongside records nothing in ancestry, so the other device may offer the same divergence again later; Dismiss records the decision so it never re-appears.
+Keep alongside records nothing in ancestry, so the other device may offer the same divergence again later; Dismiss records the decision so it never re-appears.
 
 ### 5.4 Review
 
@@ -148,12 +148,12 @@ Each adapter reports how it replaces a file (`ReplaceMode`): `Atomic` (rename ov
 5. Both are the same idempotent procedure, so recovery can be interrupted and resumed.
 6. If recovery cannot complete, the journal stays, the game stays blocked, and the user can copy any checkpoint out with `export-files`.
 
-**[default]** Doki never resolves an interrupted install on its own; the user chooses Finish or Put back.
+Doki never resolves an interrupted install on its own; the user chooses Finish or Put back.
 
 ## 7. Retention, cleanup and deletion
 
-- Pinned checkpoints are protected from any future cleanup.
-- **[default]** Checkpoints are kept forever. Nothing is deleted automatically unless the user picks a retention time. `clean` removes only temporary files and objects no checkpoint references.
+- Pinned checkpoints are never removed by retention and cannot be deleted by hand until unpinned.
+- Checkpoints are kept forever by default. Nothing is deleted automatically unless the user picks a retention time. `clean` removes only temporary files and objects no checkpoint references.
 - **Deleting a checkpoint** (`Engine::delete_checkpoint`) and **retention** (`Engine::apply_retention`, a time the user chose under "Keep checkpoints for") remove only a checkpoint's *files* on this device. The checkpoint record (parents, file list) stays, so ancestry keeps deciding how other checkpoints relate; the checkpoint is marked as having its files removed and can no longer be used or restored here. Packages carry such checkpoints as history only (`without_files`), and a receiver that lacks their files marks them the same way, so a later handoff still fast-forwards instead of looking like a conflict.
   - Deleting by hand is refused for the current save, pinned checkpoints and incoming progress still waiting for a decision.
   - Retention runs under the vault's exclusive cleanup lock and every bundle lock, previews what goes before the user confirms a shorter time, and always keeps per game: the 10 newest checkpoints by ancestry, the current save, pins, history tips, set-aside progress and choices, pending proposals and anything an install journal refers to. Capture times only decide what counts as old, never which save wins. It runs after the user confirms, and after automatic checkpoints, never because a folder is missing, another device is absent or the disk is full.
@@ -167,7 +167,7 @@ Each adapter reports how it replaces a file (`ReplaceMode`): `Atomic` (rename ov
 |---|---|---|
 | Bytes verified | Every file's SHA-256 and size match | "Verified copy" |
 | Bundle complete | Files the profile requires are present, none outside the folder | "Complete save files" |
-| Format checked | A format inspector parsed it (future, X05) | "Save format looks valid" |
+| Format checked | A format inspector parsed it (not built yet) | "Save format looks valid" |
 | Load observed | User or integration confirmed the game loaded it | "Loaded on <device>" |
 | Unknown | Nothing beyond bytes | No validity claim (default for binary saves) |
 
@@ -178,7 +178,7 @@ Doki never infers "more progress" from size, time or hash. A compatibility-matri
 | Concern | Desktop local folder (`LocalDir`) | Android Storage Access Framework |
 |---|---|---|
 | Missing folder | `SourceUnavailable` | Adapter throws `FileNotFoundException`, mapped to `SourceUnavailable`; revoked access throws `SecurityException`, mapped to `PermissionLost`. Not yet measured on hardware. |
-| Per-file atomic replace | Staged file renamed over the target on the same volume (`MoveFileExW` with replace on Windows, `rename(2)` on POSIX). Not established for network shares or FAT removable media. | No rename-over. Adapter uses `DeleteThenRename` (delete the target, then `renameDocument` the verified staged sibling) only when the provider advertises delete, rename and create; otherwise `Unknown` and installs are refused. Behaviour on real providers is not yet measured (F01). |
+| Per-file atomic replace | Staged file renamed over the target on the same volume (`MoveFileExW` with replace on Windows, `rename(2)` on POSIX). Not established for network shares or FAT removable media. | No rename-over. Adapter uses `DeleteThenRename` (delete the target, then `renameDocument` the verified staged sibling) only when the provider advertises delete, rename and create; otherwise `Unknown` and installs are refused. Behaviour on real providers is not yet measured. |
 | Truncating overwrite | Not used | Not used: staged copies are always new documents, never overwritten in place |
 | Multi-file atomicity | Not provided; journaled | Not provided; journaled |
 | Durability | `fsync` of files and, on POSIX, directories | Not tested |
@@ -193,7 +193,7 @@ No platform claim is made beyond this table. Supported emulators are listed only
 - **Handoff package file**: one file the user moves themselves, carrying checkpoints, objects and offers (format in `crates/doki-engine/src/package.rs`). Not encrypted; for trusted channels only.
 - **Device to device** (`crates/doki-peer`, see [peer.md](../peer.md)): devices connect directly over QUIC (iroh), authenticated by per-device Ed25519 keys and encrypted end to end. A device accepts sessions only from devices in its trusted book; pairing needs a code open for 15 minutes, proven over the encrypted connection, and 20 wrong attempts close every open code. Removals spread through the group and are never undone by another device's book; only a newer pairing of that device brings it back. A session sends handoff packages (above) and imports them as in 5.1: vault only, never a save folder. Messages are capped at 16 MiB and packages at 16 GiB.
 - **Relay** (`crates/doki-relay`, client in `crates/doki-sync`): stores the same packages, sealed on the device with XChaCha20-Poly1305 under a key derived from the pairing secret, so the relay never sees save bytes or names. It never decides which save wins, never deletes on a device's behalf, and expires packages after its retention period; expiry is not deletion. Receiving through the relay is the same import as a file (5.1): vault only.
-- Interim limit: paired devices share one secret, so revoking one device means re-pairing the rest (see [relay.md](../relay.md)). S01 replaces this before internet-facing release.
+- Interim limit: paired devices share one secret, so revoking one device means re-pairing the rest (see [relay.md](../relay.md)). Per-device relay keys are required before the relay is recommended for use over the internet.
 - Sync is not an independent backup.
 
 ## 11. Error identifiers

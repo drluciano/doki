@@ -1,6 +1,6 @@
 # Contributing to Doki
 
-Start with the [safety contract](docs/spec/safety-contract.md), the [engineering plan](docs/engineering.md), [workflow](docs/workflow.md) and [agent rules](AGENTS.md).
+Start with the [safety contract](docs/spec/safety-contract.md) and the [engineering overview](docs/engineering.md). Coding agents also follow [AGENTS.md](AGENTS.md).
 
 ## Build and test
 
@@ -12,6 +12,8 @@ cargo test --workspace
 
 CI runs the same commands on Linux and Windows (`.github/workflows/rust.yml`).
 
+If you changed the app, also run `tools/app-test.sh` (format, analyze, widget tests and real-engine tests). If you changed the Android bridge, run `tools/jni-desktop-test.sh`. If you changed the wiki, run `python3 tools/wiki.py check docs/wiki`. Building the app is described in [docs/app.md](docs/app.md).
+
 ## Layout
 
 | Path | What it is |
@@ -19,7 +21,7 @@ CI runs the same commands on Linux and Windows (`.github/workflows/rust.yml`).
 | `crates/doki-core` | Domain model: checkpoints, bundle paths, ancestry, error codes. No I/O. |
 | `crates/doki-vault` | Local vault: content-addressed objects, checkpoints, records, locks. |
 | `crates/doki-platform` | Save-folder adapters (`SaveLocation`) and fault injection. |
-| `crates/doki-engine` | Capture, review, install with verified backup, recovery, handoff packages. |
+| `crates/doki-engine` | Capture, automatic checkpoints, whole systems, review, install with verified backup, recovery, deletion and retention, handoff packages. |
 | `crates/doki-peer` | Device-to-device sync: pairing, trusted device book, direct encrypted sessions (iroh). |
 | `crates/doki-relay` | Self-hostable relay server (`doki-relay`). |
 | `crates/doki-sync` | Relay client: pairing, encryption, sync. |
@@ -36,6 +38,7 @@ CI runs the same commands on Linux and Windows (`.github/workflows/rust.yml`).
 - Any code path that writes playable files goes through the journaled install in `crates/doki-engine/src/install.rs`. Add a crash-point test for every new step.
 - Update the safety contract in the same PR as behaviour it describes.
 - Use synthetic or licensed fixtures. Keep ROMs, real saves and secrets out of the repository.
-- PRs reference issues without automatic closure. The owner accepts and completes stories.
+- Pull requests reference their issue with `Refs #N` rather than closing keywords. The maintainer merges pull requests and closes issues.
+- Update the docs and wiki pages (`docs/wiki`) a change affects in the same pull request.
 
-A project license has not been selected; do not imply third-party permission or copy reference assets.
+No license has been chosen yet. Do not copy code or assets from other projects into Doki.

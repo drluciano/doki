@@ -1,119 +1,92 @@
-# Doki product design proposal
+# Design
 
-Status: **Proposed; awaiting owner acceptance.** This document supplies design direction and story-ready criteria. It is not an approved visual specification or permission to implement later engineering stories.
+How the Doki app looks, reads and behaves, and why. The code is in `app/lib`; colors live in `app/lib/theme.dart`, motion in `app/lib/motion.dart` and `app/lib/widgets/focus_halo.dart`, and user-facing wording in `app/lib/copy.dart` and the screens.
 
-## Reference and intent
+## Intent
 
-The owner selected [CocoonFE](https://github.com/inssekt/CocoonFE). Its README describes a customizable game library, adaptable grid layouts, modular themes, and a setup wizard. These support a game-first, personable direction. The palette, dimensions, and interactions below are original proposals, not claims about Cocoon's exact appearance. Review actual visual mockups with the owner before treating appearance as accepted. Do not copy assets, trademarks, or code without checking their licenses.
+Doki should feel like a friendly place to keep your progress: soft, warm and game-first, in the spirit of [CocoonFE](https://github.com/inssekt/CocoonFE)'s game library. The friendliness never gets in the way of accuracy. Every screen that can change a save says exactly what will happen to the files, and the core promise is visible throughout: receiving progress never changes your save until you choose to use it.
 
-Doki should feel like a friendly place to keep progress. Cute styling must coexist with precise descriptions of what will happen to files. The primary promise is: receiving a checkpoint never silently changes the playable save.
+Doki's look is its own. No assets, trademarks or code are taken from CocoonFE.
 
-## Proposed design system
+## Words
 
-- Surfaces: warm cream background (#FAF7F2), white cards, ink text (#272335), muted text (#655D70), lavender accent (#7354A3), and mint secondary accent. Validate final token combinations for contrast before release.
-- Semantic states: success, attention, and error always include a word and icon; color alone never conveys safety. Reserve error styling for failed operations and confirmed destructive actions.
-- Shape: 16–24 logical-pixel card corners, rounded buttons, restrained soft shadows. Avoid translucent text surfaces unless contrast remains stable over every background.
-- Spacing: 4-unit base, with 8/12/16/24/32 steps. Content width caps around 1200 logical pixels; paragraphs around 65 characters.
-- Type: licensed bundled font or native system stack, friendly headings and highly legible body. Body default 16 logical pixels, metadata at least 14; accommodate platform scaling without clipped controls.
-- Components: game card, device chip, checkpoint card, status banner, proposal comparison, chronological timeline, operation progress, inline validation, empty state, confirmation sheet, and persistent result panel.
-- Copy follows the owner's vocabulary: “Checkpoint” (commit), “Separate progress” (branch), “Incoming progress” (proposal), “Use this save” (checkout) and “Restore a checkpoint” (revert). Divergence reads “You played on both devices. Choose which save to continue. Both versions will stay in your history.” Never imply binary saves can be merged unless a compatible inspector actually supports that operation.
-- Game imagery is optional. Initials and platform symbols provide attractive fallbacks; no onboarding requirement for game-art services.
+Doki is built like version control, but never uses version-control words on screen.
 
-## Navigation and responsive behavior
+| Concept | On screen |
+|---|---|
+| Commit | **Checkpoint** |
+| Branch | **Separate progress** |
+| Incoming commit to review | **Incoming progress** |
+| Checkout | **Use this save** |
+| Revert | **Restore a checkpoint** |
+| Divergence | "You played on both devices. Choose which save to continue. Both versions will stay in your history." |
 
-The main screens are Library, Incoming, History and Devices. Compact windows use bottom navigation for Library, Incoming, History and Devices, with Settings in the top-level menu; History opens for the selected game. Medium and wide windows use a navigation rail; wide game detail supports a history column beside checkpoint details. Breakpoints should follow available content space, not OS identity; test narrow Windows windows and landscape Android handhelds.
+Buttons say what will happen: **Back up and use this save**, **Checkpoint now**, **Put my save back**. Saves are never described as merged; the user always picks one whole version and the other is kept.
 
-Library cards show title, emulator/profile, latest protected checkpoint, and textual status. Selecting a card opens game details with current playable save, capture button, incoming progress, and history. Incoming shows only progress waiting for a decision. Devices show last successful exchange and connection status separately. Settings expose retention, vault location, accessibility, diagnostics, and transport settings.
+## Visual system
 
-At 320 logical pixels and 200% text scaling, use a single scrolling column. Never shrink safety text or hide the destination behind an overflow menu. In comparison view, stack save cards with explicit device headings; do not rely on left/right positions. Large screens may show them side by side. Preserve reading and focus order.
+- **Colors** (light theme): warm cream page `#FAF7F2`, white cards, ink text `#272335`, muted text `#655D70`, lavender accent `#7354A3`, mint for "protected", amber for "needs attention", red only for failures and confirmed destructive actions. Dark and OLED themes use soft, low-glare equivalents; OLED puts true black behind cards. All three are in `DokiPalette`.
+- **State is never color alone.** Success, attention and error always come with a word and an icon.
+- **Shape**: rounded cards (16 to 24 logical pixels), pill buttons, soft shadows, no text over translucent surfaces.
+- **Spacing**: multiples of 4 (8, 12, 16, 24, 32). Content is capped at about 900 logical pixels wide.
+- **Type**: the platform's system font. Body text 16 logical pixels, metadata at least 14, and layouts survive large system text sizes without clipping.
+- **Game art** is optional. Without a cover, a soft tile with the game's initials stands in. Art comes from SteamGridDB with the user's own key, or from images they pick, and is stored on the device only.
 
-## Interaction and motion
+## Navigation
 
-- Primary actions describe the result: “Create checkpoint” and “Back up and use this save.” An incoming checkpoint notification opens review; it never applies the save.
-- Transition durations: approximately 120–180 ms for control feedback and 180–260 ms for panels. Use modest fade/position changes. Motion demonstrates completion or movement between states, never simulates progress.
-- Progress reflects measurable steps (reading, verifying, saving); unknown duration uses a labeled indeterminate indicator. Do not manufacture percentages.
-- Reduced-motion setting follows the OS by default and removes translation, bounce, and celebration. Success remains apparent through text and icon.
-- Cancel is available before file replacement begins. Once a recoverable installation begins, explain why closing the app does not cancel the operation; show recovery state on reopening.
-- Escape/back closes transient UI first. Never dismiss a nonrecoverable error without leaving a way to find its details.
+Five tabs: **Library**, **Incoming** (with a badge counting what waits), **History**, **Devices** and **Settings**. Below 720 logical pixels wide they sit in a bottom bar; wider windows use a side rail. Every tab keeps its state when you switch away.
 
-### Motion as built (app/lib/motion.dart, app/lib/widgets/focus_halo.dart)
+- **Library** shows games as covers grouped by system, with a status line for each (protected, new progress, needs attention), plus games and systems set up on other devices.
+- A **game page** has a banner, the current save, **Checkpoint now**, and the game's history.
+- **Incoming** lists only progress waiting for a decision. Opening one shows the review: your save and the incoming one, named by device, never by left or right position alone.
+- **Devices** handles pairing, sync, background running, start with Windows, and notification switches.
+- **Settings** has theme, border color, and Help and how-tos.
 
-- **Focus border.** One rounded border (lavender unless the person picks another color in Settings), drawn once above the whole app, marks the control you are about to use. It glides on a slightly springy curve (about 250 ms to settle) between controls as the mouse hovers, as Tab, arrow keys or a controller D-pad move focus, and under a finger on touch screens. Pressing squeezes it 2 px. Its corners follow the control it surrounds (pill buttons get a pill, cards their card corner, text fields their field corner, read from the control's own shape or the theme), and around text fields it hugs the field's border, not its helper text. It tracks any enabled tappable control and any focused control, so new screens get it without extra code. Keyboard focus is shown only while keys drive focus. It stays inside the scrolling list it belongs to, pulls in rather than being cut off where a control touches the window edge (the navigation rail), and lets go when a screen is covered.
-- **Screens.** Pushed screens fade in while rising slightly (260 ms in, 220 ms back); the screen underneath settles to 97%. Tabs fade through: the old tab fades out, then the new one fades in from 98%. Every tab keeps its state.
+On narrow screens and at large text sizes, comparison cards stack in one column with explicit headings. Safety text is never shrunk or hidden behind a menu.
+
+## Motion
+
+Motion shows where things went; it never fakes progress.
+
+- **Focus border.** One rounded border (lavender unless changed in Settings), drawn once above the whole app, marks the control you are about to use. It glides on a slightly springy curve (about 250 ms) as the mouse hovers, as Tab, the arrow keys or a controller D-pad move focus, and under a finger on touch screens. Pressing squeezes it by 2 px. Its corners match the control it surrounds (pill buttons get a pill, cards their card corner, text fields their field corner, read from the control's own shape or the theme); around text fields it hugs the field, not its helper text. It tracks every enabled tappable control and every focused control, so new screens get it with no extra code. Keyboard focus is shown only while keys drive focus. It stays inside the scrolling list it belongs to, pulls in rather than being cut off at the window edge, and lets go when a screen is covered. It has no semantics and takes no input, so screen readers and hit testing are unaffected.
+- **Screens.** Pushed screens fade in while rising slightly (260 ms in, 220 ms back); the screen underneath settles to 97%. Tabs fade through: the old tab fades out, the new one fades in from 98%.
 - **Arrivals.** Empty states fade and rise in; status banners blend between kinds.
-- **Reduced motion.** When the OS asks for it, the border jumps instead of gliding or popping, and screens and tabs only fade. High contrast draws the border in ink at 3.5 px.
-- **Splash.** Starts only once the vault has loaded and a frame is on screen; letters arrive over about 1.1 s, the tagline follows, the wordmark holds about 0.6 s, then fades into the app (480 ms).
-- **Themes.** Light, Dark and OLED palettes live in `app/lib/theme.dart` (`DokiPalette`); dark tones are soft and low-glare, OLED puts true black behind cards. Switching is instant rather than cross-faded, so Doki's own colors and Material's change together.
-- The border has no semantics and takes no input; screen readers and hit testing are unchanged.
+- **Splash.** Starts once the vault has loaded and a frame is on screen. The letters arrive over about 1.1 s, the tagline follows, the wordmark holds about 0.6 s, then it fades into the app (480 ms). The Android launch screen before it uses the same page color.
+- **Themes** switch instantly rather than cross-fading, so Doki's colors and Material's change together.
+- **Reduced motion.** When the system asks for it, the border jumps instead of gliding, screens and tabs only fade, and the splash is shorter and still. With high contrast on, the border is drawn in the text color at 3.5 px.
+- Progress shows real steps ("Copying and verifying the save…", "Backing up, copying and verifying…"), never invented percentages.
 
-## Accessibility acceptance baseline
+## Accessibility
 
-Every action supports keyboard and touch, with predictable focus order and visible focus. Target minimum 48×48 logical pixels for touch controls. Controller support uses directional navigation with no focus traps. Screen readers announce control names, checkpoint device, capture time, verification state, and operation completion without repeating every progress tick. State changes do not steal focus unless the current control disappears. Body text aims for 4.5:1 contrast and meaningful graphics/focus indicators 3:1. Validate against the applicable WCAG 2.2 criteria and platform accessibility tooling. Test high contrast, text scaling, reduced motion, keyboard-only use, screen readers, and long translated strings. Dates use local formatting with absolute timestamp available; relative dates must not be the sole identity of a checkpoint.
+- Everything works by keyboard, touch, mouse and controller, with a predictable focus order and no focus traps. Enter, Space or A chooses; Escape or the back button closes the topmost thing first.
+- Touch targets are at least 48 × 48 logical pixels.
+- Screen readers hear control names, which device a checkpoint came from, when it was saved, whether it is verified, and when an operation finishes, without every progress tick.
+- Body text aims for 4.5:1 contrast and focus indicators for 3:1 (WCAG 2.2).
+- Dates are shown as absolute local times; a relative time is never the only way to tell checkpoints apart.
 
-## Tutorial
+## States the app must handle
 
-Use isolated sample data and clearly label every page “Practice saves.” Steps: create a checkpoint, receive a checkpoint, inspect two divergent paths, choose a continuation, and restore the other path. Show the preserved history after each action. Back, Skip tutorial, and Replay tutorial remain available; a skipped tutorial never blocks the app. No tutorial operation may touch a user's configured save folder. Completion explains that local protection, successful transfer, and independent backup are distinct conditions.
+Every error says what happened, whether the playable save changed, what is still protected, and what to do next. Technical details and paths sit under **Details**. Controls for unsupported actions are not shown as if they work.
 
-## Screen and state inventory
+| Situation | What the user sees |
+|---|---|
+| No games yet | What a save folder is, and **Add game** |
+| Folder picker cancelled | Back to the form, with what was typed kept |
+| Folder access revoked | "Folder access needs updating", with a way to choose the folder again |
+| Folder missing or storage removed | "Save location unavailable"; never treated as a deleted save |
+| Empty folder | "This folder has no save files"; no checkpoint is made |
+| Save still being written | "New progress, checkpoint coming soon" while waiting; "Waiting for the save to finish" if a manual checkpoint catches it moving |
+| Other device unreachable | Which devices were reached; nothing suggests local progress was lost |
+| Storage full | Whether Doki's storage or the save folder is full |
+| Received copy damaged | Install blocked; sync again |
+| Both devices played | Both versions named, the checkpoint they share, and both kept |
+| Played since the review | The new progress is checkpointed first, and the review starts over |
+| Install in progress | Backup, copy and verify steps; no second install at the same time |
+| Install interrupted | A persistent "A change to this save was interrupted" until the user chooses **Finish the change** or **Put my save back** |
+| Shorter **Keep checkpoints for** | How many checkpoints would go, before anything is deleted |
+| Nothing incoming | A calm empty state with when Doki last checked |
 
-| Context | Required presentation and action |
-| --- | --- |
-| Fresh install | Welcome; practice tutorial; connect a save folder; no sign-in required for local use |
-| Empty library | Explain folder connection and show Add game action |
-| Folder picker canceled | Return to setup without error; retain entered values |
-| Folder inaccessible/revoked | “Folder access needs updating”; reconnect; retain vault/history |
-| Folder missing / SD card removed | “Save location unavailable”; retry/reconnect; never infer deletion |
-| Empty folder / unrecognized format | Explain result and supported profile options; no false checkpoint success |
-| Active or changing files | “Waiting for the save to finish”; retry and clear recovery guidance |
-| Offline | Local checkpoint remains usable; pending transfer count; last successful exchange |
-| Device unreachable | Retry/pairing help; no suggestion that local progress was lost |
-| Authentication expired / device revoked | Reconnect or pair; no automatic credential disclosure in diagnostics |
-| Storage full | Identify vault vs destination; offer storage settings; preserve current save |
-| Integrity failure | Quarantine/refetch affected data; block apply; show recoverable explanation |
-| Compatibility unknown/mismatch | Name emulator/profile difference; block known incompatibility and explain unknown status |
-| Divergence | Two named continuations plus common ancestor; choose one and preserve both |
-| Local files changed after review | Capture new progress and refresh comparison; require new review |
-| Apply in progress | Backup → stage → install → verify; actual operation state; no competing apply |
-| Interrupted installation | Persistent recovery screen reporting restored/continued outcome, with details |
-| Backup or recovery failure | Block replacement; persistent action guide and diagnostics export |
-| Successful capture | New verified checkpoint in history; distinguish unchanged-save deduplication |
-| Successful apply | Current playable checkpoint identified; restore previous checkpoint action |
-| Retention approaching limit | Explain policy and pinning before cleanup; no surprise history removal |
-| Remote deletion proposal | Explicit scope and consequences; no implicit deletion from missing folders |
-| No proposals | Calm empty state with last checked time, refresh, and offline qualifier when relevant |
+## Not built yet
 
-Errors must include what happened, whether playable files changed, what remains protected, and a concrete next action. Raw paths and technical details live in expandable details; avoid sensitive contents in telemetry/export. Unsupported capabilities are explained, never represented by controls that appear functional.
-
-## First story: onboarding to local use
-
-User story: As a new player, I can understand Doki's safety promise and open the library without configuring a server.
-
-Flow: Welcome → optional practice tutorial → local device name → empty library. Save-folder registration is a separate story so onboarding does not assume Android access is solved.
-
-Welcome wireframe: small original Doki emblem; heading “Keep your progress, on your terms”; three short statements (“Keep checkpoints,” “Review incoming saves,” “Restore earlier progress”); primary “Try practice saves”; secondary “Go to my library.” Device-name entry suggests a local name and clearly labels it editable; never display hardware identifiers as a user-friendly name.
-
-Acceptance: back/resume preserves completed non-sensitive steps; skip and replay work; no account/network permission required; practice data is isolated; keyboard/screen-reader/text-scaling behavior passes; no promise of cross-device sync before a device/transport is configured. Owner review includes compact and wide mockups and a tutorial recording. This document alone does not satisfy visual review.
-
-## First story: register a save folder
-
-Flow: Add game → choose supported emulator/profile → enter game title → platform folder picker → inspect selected files → confirm mapping. Explain Android limitations before presenting unsupported locations; the native picker remains the access authority.
-
-Review card shows game, profile, displayed folder location, selected file bundle, and estimated size. “Connect folder” only registers access; it does not alter saves. Warn against placing the vault inside the watched save folder. Duplicate mappings identify the existing entry. Cancellation retains draft data but no permission is assumed to persist without platform confirmation.
-
-Acceptance: selected location and bundle are visible before confirmation; unsupported/empty/inaccessible locations have actionable states; multi-file bundles are not split silently; native save vs save-state compatibility is explicit. Owner review uses Android and Windows real folder-picker flows with both accessible and denied examples.
-
-## First story: create and inspect a local checkpoint
-
-User story: As a player, I can preserve my current save and see evidence that the checkpoint was captured.
-
-Flow: Game details → Create checkpoint → read stable bundle → verify → write vault object/metadata → history entry. An optional label field defaults to blank and never blocks capture. While running, keep the game title and source folder visible; disable duplicate capture only for the affected bundle. Do not claim an emulator is closed unless integration verifies it.
-
-Result card shows label/fallback name, device, absolute capture time, bundle size, file count, and “Verified copy.” Clarify this means copied bytes verified, not validated game progress. Unchanged data says “No changes since [checkpoint]” and links to it. A checkpoint details sheet exposes manifest/hashes under Details, without making those prerequisites for normal use.
-
-Acceptance: source files are unchanged; cancellation/failure never produces a success state; partial objects are not selectable as checkpoints; unstable files receive bounded retry and guidance; full-disk/read-error states preserve history and source; refresh/restart retains completed checkpoint; screen-reader completion is announced once. Review evidence includes successful capture, unchanged capture, unavailable source, and failed-write scenarios. Restore/apply receives its own safety-critical story and review.
-
-## Design handoff and approval
-
-A story enters Ready for engineering only with applicable flows, copy, all states, responsive behavior, accessibility expectations, and mockups/prototype references. Technical stories can mark visual design Not applicable with a reason, but still require observable acceptance and error behavior. The designer labels this as a proposal; only the owner can accept completed work. Engineering cannot advance to another story while the current engineering story awaits owner acceptance under the agreed work-in-progress rule.
-
-Each implementation review includes screenshots at agreed compact/wide sizes, an interaction recording where motion matters, accessibility results, and a short manual acceptance script. Owner-requested changes remain on the same story with updated criteria and design revision notes.
+- **Practice tutorial.** Disposable sample saves, clearly labelled "Practice saves", that walk through creating a checkpoint, receiving one, seeing two separate paths, choosing one and restoring the other. It must never touch a real save folder, and can be skipped or replayed.
+- **Folder preview.** Before connecting a folder, show the files Doki will treat as the save and their size.

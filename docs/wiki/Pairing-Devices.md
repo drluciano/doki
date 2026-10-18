@@ -1,6 +1,6 @@
 # Pairing your devices
 
-Your devices sync with each other directly. There is no server to set up and no account to create: every device is equal, the way Syncthing works. A phone, a handheld and a PC can each add the next device, and any two of them sync whenever both have Doki open.
+Your devices sync with each other directly. There is no server to set up and no account to create: every device is equal, the way Syncthing works. A phone, a handheld and a PC can each add the next device, and any two of them sync whenever Doki is running on both (open, in the Windows tray, or in the background on Android).
 
 ## Pair two devices
 
@@ -41,7 +41,7 @@ Games added on one device appear on the others under **On your other devices** i
 
 ## Removing a device
 
-Open **Devices**, choose the device, and choose **Remove**. The removal reaches every device on its next sync, and the removed device can no longer sync with any of yours. Checkpoints it already sent stay in your history. To add it back later, pair it again with a new code.
+Open **Devices**, choose the remove button next to the device, and confirm with **Remove**. The removal reaches every device on its next sync, and the removed device can no longer sync with any of yours. Checkpoints it already sent stay in your history. To add it back later, pair it again with a new code.
 
 ## Privacy
 

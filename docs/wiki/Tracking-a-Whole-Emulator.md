@@ -22,7 +22,7 @@ Doki looks at the top level of the folder:
 
 Hidden files and system litter (`Thumbs.db`, `desktop.ini`) are ignored. A game is named after its folder or file name; rename it on its page if you like (for example, when the folder is a title id).
 
-Each game then works exactly like a game you added on its own: automatic checkpoints, **Checkpoint now**, Incoming, History, **Use this save** and **Restore**, with the same backup and recovery. Every new subfolder or save that appears is added the next time Doki checks the folder (every few seconds while Doki is open, and in the background on Android).
+Each game then works exactly like a game you added on its own: automatic checkpoints, **Checkpoint now**, Incoming, History, **Use this save** and **Restore**, with the same backup and recovery. Every new subfolder or save that appears is added the next time Doki checks the folder (about every 15 seconds while Doki is running).
 
 ## On your other devices
 

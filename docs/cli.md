@@ -1,8 +1,8 @@
 # The `doki` command
 
-The command line drives the same engine the app will use, with the same words: Checkpoint, Separate progress, Incoming progress, Use this save, Restore a checkpoint.
+The command line drives the same engine the app uses, with the same words: Checkpoint, Separate progress, Incoming progress, Use this save, Restore a checkpoint.
 
-The vault lives in `--vault <folder>`, else `$DOKI_VAULT`, else `%APPDATA%\Doki` on Windows or `~/.local/share/doki` elsewhere. Keep it outside every save folder; Doki refuses overlapping folders.
+The vault lives in `--vault <folder>`, else `$DOKI_VAULT`, else `%APPDATA%\Doki` on Windows, or `$XDG_DATA_HOME/doki` (normally `~/.local/share/doki`) elsewhere. The app keeps its own, separate vault in its app data folder. Keep it outside every save folder; Doki refuses overlapping folders.
 
 ## Everyday handoff
 

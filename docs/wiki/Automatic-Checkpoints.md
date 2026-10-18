@@ -4,7 +4,7 @@ You do not have to remember to make checkpoints. Doki watches each save folder a
 
 ## How it works
 
-1. Doki looks at each save folder every few seconds.
+1. Doki looks at each save folder about every 15 seconds.
 2. When a save changes, Library shows **New progress, checkpoint coming soon**.
 3. Once the save has stayed the same for **30 seconds**, Doki makes a checkpoint, checking every file as it copies. If the files change again while it copies, it waits and tries later.
 
@@ -14,7 +14,7 @@ Nothing is ever replaced by an automatic checkpoint. It only copies your save in
 
 ## Checkpoint now
 
-To save one right away (for example, before a hard boss), close the game in the emulator, open it in Library and choose **Checkpoint now**. You can add a label, such as "Before the gym".
+To save one right away (for example, before a hard boss), close the game in the emulator, open it in Library and choose **Checkpoint now** (the button says **Create checkpoint** when automatic checkpoints are off). You can add a label, such as "Before the gym".
 
 ## Keep it running while you play
 
