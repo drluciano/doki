@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use doki_core::{BundleId, CaptureMode, CheckpointId, Error, FilesDigest, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::records::{ProposalStatus, UnmappedBundle, BUNDLES, PROPOSALS, UNMAPPED, WATCH};
+use crate::records::{UnmappedBundle, BUNDLES, UNMAPPED, WATCH};
 use crate::{is_within, normalize_location, CaptureOutcome, Engine, LocationProvider};
 
 /// Fields to change with [`Engine::update_bundle`]; `None` leaves a field as
@@ -59,6 +59,18 @@ impl<P: LocationProvider> Engine<P> {
         location: &str,
         except: Option<&BundleId>,
     ) -> Result<String> {
+        self.check_folder(location, except, None)
+    }
+
+    /// Check a folder for a game or a whole system (`except_system`, when a
+    /// system is being changed) and return it in stored form. A folder can
+    /// belong to one game or one system, and never contain Doki's vault.
+    pub(crate) fn check_folder(
+        &self,
+        location: &str,
+        except: Option<&BundleId>,
+        except_system: Option<&BundleId>,
+    ) -> Result<String> {
         self.provider.open(location).check_available()?;
         let location = normalize_location(location);
         if is_within(self.vault.root(), Path::new(&location))
@@ -69,10 +81,21 @@ impl<P: LocationProvider> Engine<P> {
             ));
         }
         for existing in self.bundles()? {
-            if existing.location == location && Some(&existing.bundle_id) != except {
+            if existing.member.is_none()
+                && existing.location == location
+                && Some(&existing.bundle_id) != except
+            {
                 return Err(Error::InvalidInput(format!(
                     "this folder is already set up for {}",
                     existing.name
+                )));
+            }
+        }
+        for system in self.systems()? {
+            if system.location == location && Some(&system.system_id) != except_system {
+                return Err(Error::InvalidInput(format!(
+                    "this folder is already set up as the system {}",
+                    system.name
                 )));
             }
         }
@@ -98,6 +121,11 @@ impl<P: LocationProvider> Engine<P> {
             record.name = name.trim().to_owned();
         }
         if let Some(location) = changes.location {
+            if record.member.is_some() {
+                return Err(Error::InvalidInput(
+                    "this game is part of a system; change the system's folder instead".into(),
+                ));
+            }
             let location = self.check_location(&location, Some(bundle))?;
             if location != record.location {
                 record.location = location;
@@ -120,16 +148,14 @@ impl<P: LocationProvider> Engine<P> {
     pub fn remove_bundle(&self, bundle: &BundleId) -> Result<()> {
         let _lock = self.lock_bundle(bundle)?;
         let record = self.bundle(bundle)?;
-        for proposal in self.proposals(bundle)? {
-            if matches!(proposal.status, ProposalStatus::Reviewable | ProposalStatus::Parked) {
-                // Offers come back with the next sync if still relevant.
-                self.vault.delete_record(
-                    PROPOSALS,
-                    &crate::records::Proposal::key(bundle, &proposal.checkpoint),
-                )?;
-            }
-        }
+        self.drop_offers(bundle)?;
         self.vault.delete_record(WATCH, bundle.as_str())?;
+        if let Some(member) = &record.member {
+            // Part of a system: stop tracking it so the next scan does not
+            // add it straight back. "Track again" brings it and its history.
+            self.ignore_member(member)?;
+            return self.vault.delete_record(BUNDLES, bundle.as_str());
+        }
         self.vault.put_record(
             UNMAPPED,
             bundle.as_str(),
@@ -138,13 +164,15 @@ impl<P: LocationProvider> Engine<P> {
                 name_hint: record.name.clone(),
                 from_device: self.vault.device_name().to_owned(),
                 has_progress: record.head.is_some(),
+                member: None,
             },
         )?;
         self.vault.delete_record(BUNDLES, bundle.as_str())
     }
 
     /// Look at every game with automatic checkpoints on and capture the ones
-    /// whose folder changed and then stayed the same for `settle`.
+    /// whose folder changed and then stayed the same for `settle`. First
+    /// adds any new games in whole-system folders ([`Engine::scan_systems`]).
     ///
     /// Safe to call often (the app calls it every few seconds). A change is
     /// only captured after two looks at least `settle` apart see the same
@@ -153,6 +181,7 @@ impl<P: LocationProvider> Engine<P> {
     /// files. Games that cannot be read are skipped and reported, not
     /// errors.
     pub fn auto_check(&self, settle: Duration) -> Result<Vec<AutoCheck>> {
+        self.scan_systems()?;
         let mut out = Vec::new();
         for record in self.bundles()? {
             if !record.auto_capture {
@@ -178,7 +207,7 @@ impl<P: LocationProvider> Engine<P> {
         if self.journal(bundle)?.is_some() {
             return Err(Error::RecoveryRequired);
         }
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(record);
         location.check_available()?;
         let files = self.scan(location.as_ref())?;
         let digest = FilesDigest::of(&files);

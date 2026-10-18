@@ -153,6 +153,34 @@ impl JniLocation<'_, '_> {
         result.map_err(|e| java_err(env, e, what))
     }
 
+    /// Call a `String[]` method taking no argument or one string.
+    fn strings(&self, method: &str, arg: Option<&str>) -> Result<Vec<String>> {
+        self.call("listing save folder", |env, f| {
+            let value = match arg {
+                Some(a) => {
+                    let a = env.new_string(a)?;
+                    env.call_method(
+                        f,
+                        method,
+                        "(Ljava/lang/String;)[Ljava/lang/String;",
+                        &[JValue::Object(&a)],
+                    )?
+                }
+                None => env.call_method(f, method, "()[Ljava/lang/String;", &[])?,
+            };
+            let arr = JObjectArray::from(value.l()?);
+            let n = env.get_array_length(&arr)?;
+            let mut out = Vec::with_capacity(n as usize);
+            for i in 0..n {
+                // Free each element: Android caps local references per frame.
+                let s = JString::from(env.get_object_array_element(&arr, i)?);
+                out.push(env.get_string(&s)?.into());
+                env.delete_local_ref(s)?;
+            }
+            Ok(out)
+        })
+    }
+
     fn bytes(env: &mut JNIEnv, value: JObject) -> jni::errors::Result<Vec<u8>> {
         env.convert_byte_array(JByteArray::from(value))
     }
@@ -190,20 +218,23 @@ impl SaveLocation for JniLocation<'_, '_> {
     }
 
     fn list(&self) -> Result<Vec<BundlePath>> {
-        let names: Vec<String> = self.call("listing save folder", |env, f| {
-            let arr =
-                JObjectArray::from(env.call_method(f, "list", "()[Ljava/lang/String;", &[])?.l()?);
-            let n = env.get_array_length(&arr)?;
-            let mut out = Vec::with_capacity(n as usize);
-            for i in 0..n {
-                let s = env.get_object_array_element(&arr, i)?;
-                out.push(env.get_string(&JString::from(s))?.into());
-            }
-            Ok(out)
-        })?;
+        let names = self.strings("list", None)?;
         let mut paths = names.iter().map(|n| BundlePath::new(n)).collect::<Result<Vec<_>>>()?;
         paths.sort();
         Ok(paths)
+    }
+
+    fn list_under(&self, dir: &BundlePath) -> Result<Vec<BundlePath>> {
+        let names = self.strings("listUnder", Some(dir.as_str()))?;
+        let mut paths = names.iter().map(|n| BundlePath::new(n)).collect::<Result<Vec<_>>>()?;
+        paths.sort();
+        Ok(paths)
+    }
+
+    fn entries(&self) -> Result<Vec<String>> {
+        let mut names = self.strings("entries", None)?;
+        names.sort();
+        Ok(names)
     }
 
     fn open(&self, path: &BundlePath) -> Result<Box<dyn Read + '_>> {

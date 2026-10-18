@@ -8,6 +8,7 @@ Doki uses a few plain words for its ideas. The command line and the app use the 
 | **Checkpoint** | An exact, verified copy of a game's save at one moment. Checkpoints never change after they are made. |
 | **History** | All the checkpoints of a game on this device, including those from other devices and backups. |
 | **Incoming progress** | A checkpoint from another device, waiting for you to review it. It has not changed anything yet. |
+| **System** | An emulator's whole save folder added once. Every game in it (each subfolder, or each set of save files sharing a name) is tracked as its own game. See [Tracking a whole emulator](Tracking-a-Whole-Emulator.md). |
 | **Use this save** | Replace your current save with incoming progress, after a verified backup. |
 | **Restore a checkpoint** | Replace your current save with a checkpoint from History, after a verified backup. |
 | **Keep alongside** | Put incoming progress in History without using it, and stop asking about it. |

@@ -5,7 +5,8 @@
 
 use std::collections::BTreeSet;
 
-use doki_core::{BundleId, Checkpoint, CheckpointId, ProfileRef};
+use doki_core::{BundleId, Checkpoint, CheckpointId, ContentHash, ProfileRef};
+use doki_platform::member::Member;
 use serde::{Deserialize, Serialize};
 
 pub(crate) const BUNDLES: &str = "bundles";
@@ -13,6 +14,8 @@ pub(crate) const PROPOSALS: &str = "proposals";
 pub(crate) const JOURNALS: &str = "journals";
 pub(crate) const UNMAPPED: &str = "unmapped";
 pub(crate) const WATCH: &str = "watch";
+pub(crate) const SYSTEMS: &str = "systems";
+pub(crate) const REMOTE_SYSTEMS: &str = "remote-systems";
 
 pub const JOURNAL_FORMAT: u32 = 1;
 
@@ -37,6 +40,94 @@ pub struct BundleRecord {
     /// changing ([`crate::Engine::auto_check`]). On unless turned off.
     #[serde(default = "yes")]
     pub auto_capture: bool,
+    /// Set when the game was found inside a whole-system folder. `location`
+    /// is then the system's folder, kept in step with it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub member: Option<MemberRef>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MemberKind {
+    /// A subfolder of the system folder.
+    Folder,
+    /// Loose files in the system folder sharing a name.
+    Files,
+}
+
+/// A game inside a whole-system folder: which system, and which subfolder
+/// or file name in it.
+///
+/// The game's id is derived from these, so once a system is linked across
+/// devices (an explicit choice), the same game file in it is the same game
+/// on every device without any matching by title.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MemberRef {
+    pub system_id: BundleId,
+    pub kind: MemberKind,
+    /// Subfolder name, or file name without extensions.
+    pub name: String,
+}
+
+impl MemberRef {
+    pub(crate) fn from_member(system_id: &BundleId, member: &Member) -> Self {
+        let (kind, name) = match member {
+            Member::Folder(n) => (MemberKind::Folder, n),
+            Member::Files(n) => (MemberKind::Files, n),
+        };
+        MemberRef { system_id: system_id.clone(), kind, name: name.clone() }
+    }
+
+    pub(crate) fn member(&self) -> Member {
+        match self.kind {
+            MemberKind::Folder => Member::Folder(self.name.clone()),
+            MemberKind::Files => Member::Files(self.name.clone()),
+        }
+    }
+
+    /// Identifies the member within its system, e.g. `folder:Zelda`.
+    pub fn key(&self) -> String {
+        let kind = match self.kind {
+            MemberKind::Folder => "folder",
+            MemberKind::Files => "files",
+        };
+        format!("{kind}:{}", self.name)
+    }
+
+    /// The game id every device derives for this member.
+    pub fn bundle_id(&self) -> BundleId {
+        let hash = ContentHash::of_bytes(
+            format!("doki-member-v1\0{}\0{}", self.system_id, self.key()).as_bytes(),
+        );
+        BundleId::parse(&hash.hex()[..16]).expect("hex digest is a valid id")
+    }
+}
+
+/// A whole-system save folder: one emulator folder where every game's
+/// subfolder or save files are tracked as their own game, including games
+/// that appear later. Key: system id.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SystemRecord {
+    pub system_id: BundleId,
+    /// Display name, e.g. "Eden" or "RetroArch GBA".
+    pub name: String,
+    pub location: String,
+    pub created_at: String,
+    /// Automatic checkpoints for games found from now on.
+    #[serde(default = "yes")]
+    pub auto_capture: bool,
+    /// Member keys ([`MemberRef::key`]) the user stopped tracking; they are
+    /// not added again until the user asks.
+    #[serde(default)]
+    pub ignored: BTreeSet<String>,
+}
+
+/// A system set up on another device and not on this one. Key: system id.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RemoteSystem {
+    pub system_id: BundleId,
+    pub name: String,
+    pub from_device: String,
 }
 
 /// What the user decided about incoming progress.
@@ -86,6 +177,10 @@ pub struct UnmappedBundle {
     /// False when another device only announced the game.
     #[serde(default = "yes")]
     pub has_progress: bool,
+    /// Set when the game is part of a system on the other device; it is set
+    /// up here on its own once that system is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub member: Option<MemberRef>,
 }
 
 fn yes() -> bool {

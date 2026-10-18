@@ -58,6 +58,7 @@ class _EditGameScreenState extends State<EditGameScreen> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final muted = text.bodyMedium?.copyWith(color: DokiColors.muted);
+    final system = AppScope.of(context).system(widget.game.systemId ?? '');
     return Scaffold(
       appBar: AppBar(title: const Text('Edit game')),
       body: SingleChildScrollView(
@@ -75,27 +76,34 @@ class _EditGameScreenState extends State<EditGameScreen> {
               const SizedBox(height: 24),
               Text('Save folder', style: text.titleMedium),
               const SizedBox(height: 4),
-              Text(
-                'Changing the folder copies and deletes nothing. Doki checkpoints whatever the new folder holds from then on.',
-                style: muted,
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: const Icon(Icons.folder_outlined, color: DokiColors.lavender),
-                  title: Text(_folder?.displayName ?? 'Current folder'),
-                  subtitle: Text(
-                    _folder?.location ?? widget.game.location,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: TextButton(
-                    onPressed: _busy ? null : _pick,
-                    child: const Text('Change'),
+              if (system != null)
+                Text(
+                  'This game is part of ${system.name}. To use another folder, change the system\'s folder: every game in it moves together.',
+                  style: muted,
+                )
+              else ...[
+                Text(
+                  'Changing the folder copies and deletes nothing. Doki checkpoints whatever the new folder holds from then on.',
+                  style: muted,
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    leading: const Icon(Icons.folder_outlined, color: DokiColors.lavender),
+                    title: Text(_folder?.displayName ?? 'Current folder'),
+                    subtitle: Text(
+                      _folder?.location ?? widget.game.location,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: TextButton(
+                      onPressed: _busy ? null : _pick,
+                      child: const Text('Change'),
+                    ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
               Card(
                 child: SwitchListTile(
@@ -128,12 +136,15 @@ class _EditGameScreenState extends State<EditGameScreen> {
 /// removed.
 Future<bool> confirmRemoveGame(BuildContext context, Game game) async {
   final state = AppScope.read(context);
+  final system = state.system(game.systemId ?? '');
   final sure = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
       title: Text('Remove ${game.name} from this device?'),
-      content: const Text(
-        'Doki stops watching its save folder here. The save files stay where they are, every checkpoint is kept, and your other devices keep the game. You can set it up again later to bring its history back.',
+      content: Text(
+        system != null
+            ? 'Doki stops tracking this game in ${system.name} here, and does not add it back on its own. The save files stay where they are, every checkpoint is kept, and your other devices keep the game. To bring it back, choose Track again on ${system.name}\'s page.'
+            : 'Doki stops watching its save folder here. The save files stay where they are, every checkpoint is kept, and your other devices keep the game. You can set it up again later to bring its history back.',
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),

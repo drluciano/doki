@@ -10,6 +10,8 @@ FakeBackend readyBackend() => FakeBackend({
   'games': (_) => [game('protected')],
   'incoming': (_) => [],
   'unmapped': (_) => [],
+  'systems': (_) => [],
+  'remote_systems': (_) => [],
   'relay_code': (_) => null,
   'peers': (_) => [],
 });

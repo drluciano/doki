@@ -99,7 +99,7 @@ impl<P: LocationProvider> Engine<P> {
         let _gc = self.vault.lock_shared("gc")?;
         let _lock = self.lock_bundle(&review.bundle_id)?;
         let record = self.bundle(&review.bundle_id)?;
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(&record);
 
         // A1: recheck against the reviewed baseline (I7).
         if record.head != review.baseline_head {
@@ -222,7 +222,7 @@ impl<P: LocationProvider> Engine<P> {
     pub(crate) fn abandon_prepared(&self, journal: &Journal) -> Result<()> {
         debug_assert_eq!(journal.phase, InstallPhase::Prepared);
         if let Ok(record) = self.bundle(&journal.bundle_id) {
-            let _ = self.provider.open(&record.location).discard_staging(&journal.op_id);
+            let _ = self.open_bundle(&record).discard_staging(&journal.op_id);
         }
         self.vault.delete_record(JOURNALS, journal.bundle_id.as_str())
     }
@@ -326,7 +326,7 @@ impl<P: LocationProvider> Engine<P> {
     pub fn recovery_status(&self, bundle: &BundleId) -> Result<Option<RecoveryStatus>> {
         let Some(journal) = self.journal(bundle)? else { return Ok(None) };
         let record = self.bundle(bundle)?;
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(&record);
         let live = self.scan(location.as_ref())?;
         let target = self.target_files(&journal)?;
         let backup = match &journal.backup {
@@ -378,7 +378,7 @@ impl<P: LocationProvider> Engine<P> {
             return Ok(RecoveryOutcome::NothingChanged);
         }
         let record = self.bundle(bundle)?;
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(&record);
         location.check_available().map_err(|e| Error::RecoveryFailed(e.to_string()))?;
         let status = self.recovery_status(bundle)?.expect("journal exists");
         let fail = |e: Error| Error::RecoveryFailed(e.to_string());

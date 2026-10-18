@@ -112,6 +112,44 @@ impl SaveLocation for LocalDir {
         Ok(out)
     }
 
+    fn list_under(&self, dir: &BundlePath) -> Result<Vec<BundlePath>> {
+        self.check_available()?;
+        let target = self.target(dir);
+        let mut out = Vec::new();
+        match fs::symlink_metadata(&target) {
+            Ok(m) if m.is_dir() => self.walk(&target, dir.as_str(), &mut out)?,
+            Ok(m) if m.file_type().is_symlink() => {
+                return Err(Error::InvalidInput(format!("links are not supported in saves: {dir}")))
+            }
+            _ => {} // absent, or a file: nothing inside it
+        }
+        out.sort();
+        Ok(out)
+    }
+
+    fn entries(&self) -> Result<Vec<String>> {
+        self.check_available()?;
+        let mut out = Vec::new();
+        let entries =
+            fs::read_dir(&self.root).map_err(|e| Error::io("listing save folder", Side, e))?;
+        for entry in entries {
+            let entry = entry.map_err(|e| Error::io("listing save folder", Side, e))?;
+            let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
+                continue; // not valid Unicode: cannot be a bundle path anyway
+            };
+            if name.starts_with(RESERVED_PREFIX) {
+                continue;
+            }
+            match entry.file_type() {
+                Ok(t) if t.is_dir() => out.push(format!("{name}/")),
+                Ok(t) if t.is_file() => out.push(name),
+                _ => {}
+            }
+        }
+        out.sort();
+        Ok(out)
+    }
+
     fn open(&self, path: &BundlePath) -> Result<Box<dyn Read + '_>> {
         let f = File::open(self.target(path))
             .map_err(|e| Error::io(format!("opening {path}"), Side, e))?;

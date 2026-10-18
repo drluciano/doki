@@ -5,6 +5,9 @@ import '../main.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../art.dart';
+import '../widgets/cover.dart';
+import 'art_picker.dart';
 import 'edit_game.dart';
 import 'library.dart';
 import 'review.dart';
@@ -172,6 +175,11 @@ class _GameScreenState extends State<GameScreen> {
                   context,
                   MaterialPageRoute<void>(builder: (_) => EditGameScreen(game: game)),
                 );
+              } else if (choice == 'art') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(builder: (_) => ArtPickerScreen(game: game)),
+                );
               } else if (choice == 'remove' && await confirmRemoveGame(context, game)) {
                 if (context.mounted) Navigator.pop(context);
               }
@@ -180,6 +188,10 @@ class _GameScreenState extends State<GameScreen> {
               PopupMenuItem(
                 value: 'edit',
                 child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Edit game')),
+              ),
+              PopupMenuItem(
+                value: 'art',
+                child: ListTile(leading: Icon(Icons.image_outlined), title: Text('Change art')),
               ),
               PopupMenuItem(
                 value: 'remove',
@@ -201,24 +213,7 @@ class _GameScreenState extends State<GameScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      GameBadge(game.name, size: 56),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(game.name, style: text.titleLarge),
-                            Text(
-                              statusText(game),
-                              style: text.bodyMedium?.copyWith(color: DokiColors.muted),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  GameHeader(game: game, systemName: state.system(game.systemId ?? '')?.name),
                   const SizedBox(height: 16),
                   if (blocked)
                     _RecoveryCard(
@@ -294,6 +289,86 @@ class _GameScreenState extends State<GameScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Top of a game's page: its banner with the cover tucked under it when it
+/// has art, then the title, status and the system it belongs to.
+class GameHeader extends StatelessWidget {
+  const GameHeader({super.key, required this.game, this.systemName});
+  final Game game;
+  final String? systemName;
+
+  @override
+  Widget build(BuildContext context) {
+    final art = AppScope.of(context).art;
+    final text = Theme.of(context).textTheme;
+    return ListenableBuilder(
+      listenable: art,
+      builder: (context, _) {
+        final hero = art.image(game.id, ArtKind.hero);
+        final aspect = art.settings.coverAspect;
+        final coverHeight = aspect < 1 ? 120.0 : 64.0;
+        final cover = SizedBox(
+          width: coverHeight * aspect,
+          height: coverHeight,
+          child: Material(
+            elevation: 3,
+            shadowColor: DokiColors.ink.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: GameCover(gameId: game.id, name: game.name),
+          ),
+        );
+        final titles = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(game.name, style: text.titleLarge),
+            Text(statusText(game), style: text.bodyMedium?.copyWith(color: DokiColors.muted)),
+            if (systemName != null)
+              Text(
+                'Part of $systemName',
+                style: text.bodySmall?.copyWith(color: DokiColors.lavender),
+              ),
+          ],
+        );
+        if (hero == null) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              cover,
+              const SizedBox(width: 16),
+              Expanded(child: titles),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: AspectRatio(
+                    aspectRatio: 96 / 31,
+                    child: Image.file(
+                      hero,
+                      fit: BoxFit.cover,
+                      cacheWidth: 1600,
+                      errorBuilder: (_, _, _) => const ColoredBox(color: DokiColors.lavenderSoft),
+                    ),
+                  ),
+                ),
+                Positioned(left: 16, bottom: -coverHeight / 2, child: cover),
+              ],
+            ),
+            SizedBox(height: coverHeight / 2 + 12),
+            titles,
+          ],
+        );
+      },
     );
   }
 }

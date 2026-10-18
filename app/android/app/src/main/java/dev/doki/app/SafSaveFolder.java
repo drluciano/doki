@@ -223,6 +223,30 @@ final class SafSaveFolder implements SaveFolder {
         return out.toArray(new String[0]);
     }
 
+    @Override
+    public String[] listUnder(String dir) throws IOException {
+        Doc folder = root();
+        for (String part : dir.split("/")) {
+            folder = child(folder, part);
+            if (folder == null || !folder.dir) return new String[0];
+        }
+        List<String> out = new ArrayList<>();
+        walk(folder, dir + "/", out);
+        Collections.sort(out);
+        return out.toArray(new String[0]);
+    }
+
+    @Override
+    public String[] entries() throws IOException {
+        List<String> out = new ArrayList<>();
+        for (Doc d : children(root())) {
+            if (d.name.startsWith(".doki-")) continue;
+            out.add(d.dir ? d.name + "/" : d.name);
+        }
+        Collections.sort(out);
+        return out.toArray(new String[0]);
+    }
+
     private void walk(Doc dir, String prefix, List<String> out) throws IOException {
         for (Doc d : children(dir)) {
             if (d.name.startsWith(".doki-")) continue;

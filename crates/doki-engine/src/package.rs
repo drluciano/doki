@@ -31,7 +31,7 @@ use doki_core::{BundleId, Checkpoint, CheckpointId, ContentHash, DeviceId, Error
 use doki_vault::now_rfc3339;
 use serde::{Deserialize, Serialize};
 
-use crate::{Engine, LocationProvider};
+use crate::{Engine, LocationProvider, MemberRef};
 
 pub const PACKAGE_FORMAT: u32 = 1;
 const MAGIC: &[u8; 8] = b"DOKIPKG\0";
@@ -55,6 +55,10 @@ struct Offer {
     bundle_id: BundleId,
     checkpoint: CheckpointId,
     game_name: String,
+    /// The game's place in a whole-system folder on the sending device.
+    /// Older packages lack it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    member: Option<MemberRef>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -100,6 +104,7 @@ impl<P: LocationProvider> Engine<P> {
                 bundle_id: bundle.clone(),
                 checkpoint: head,
                 game_name: record.name,
+                member: record.member,
             });
             checkpoints.extend(
                 all.iter().filter(|(_, cp)| &cp.bundle_id == bundle).map(|(_, cp)| cp.clone()),
@@ -243,6 +248,14 @@ impl<P: LocationProvider> Engine<P> {
             let cp = self.vault.checkpoint(&offer.checkpoint)?;
             if cp.bundle_id != offer.bundle_id {
                 return Err(Error::IntegrityFailed("offer names the wrong game".into()));
+            }
+            if let Some(member) = &offer.member {
+                self.note_remote_member(
+                    &offer.bundle_id,
+                    member,
+                    &offer.game_name,
+                    &index.from_device,
+                )?;
             }
             let mapped = self.bundle(&offer.bundle_id).is_ok();
             let _lock = if mapped {

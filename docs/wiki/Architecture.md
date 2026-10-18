@@ -33,7 +33,7 @@ flowchart TB
 |---|---|
 | `doki-core` | Checkpoints, path rules, ids, ancestry and error codes. No I/O. |
 | `doki-vault` | The local store: files stored once by SHA-256, immutable checkpoint records, per-game records, OS locks. |
-| `doki-platform` | The `SaveLocation` trait for save folders, the local-folder adapter, and fault injection for tests. |
+| `doki-platform` | The `SaveLocation` trait for save folders, the local-folder adapter, `MemberLocation` (one game inside a whole-system folder) and fault injection for tests. |
 | `doki-engine` | Capture, review, the journaled install, recovery and handoff packages. Every write to a save folder goes through `install.rs`. |
 | `doki-peer` | Per-device Ed25519 identity, trusted device book, pairing codes, LAN discovery and QUIC sessions over iroh. |
 | `doki-sync`, `doki-relay` | The optional relay: client with XChaCha20-Poly1305 sealing, and the server. |

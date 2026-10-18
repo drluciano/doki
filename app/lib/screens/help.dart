@@ -40,6 +40,27 @@ const helpTopics = [
     ],
   ),
   HelpTopic(
+    Icons.folder_special_outlined,
+    'Track a whole emulator',
+    'Add an emulator\'s save folder once, and every game in it is tracked.',
+    [
+      'In Add game, choose Whole system and pick the emulator\'s save folder.',
+      'Each subfolder, or each set of save files sharing a name, becomes its own game. Games you play later are added on their own.',
+      'Set up the same system on your other device (it shows under Systems on your other devices) to keep every game in step.',
+      'Removing a game from a system stops tracking it; Track again on the system\'s page brings it back with its history.',
+    ],
+  ),
+  HelpTopic(
+    Icons.palette_outlined,
+    'Game art',
+    'Covers in the library and a banner on each game\'s page.',
+    [
+      'Open Game art in Library and paste your free SteamGridDB API key to find art automatically.',
+      'Or open a game, choose Change art, and pick your own cover and banner images.',
+      'Art stays on this device and never changes your saves.',
+    ],
+  ),
+  HelpTopic(
     Icons.bookmark_add_outlined,
     'Create a checkpoint',
     'Save a copy of your progress to keep and share.',
