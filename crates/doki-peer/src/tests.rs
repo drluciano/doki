@@ -178,11 +178,13 @@ fn short_code_pairs_devices_on_the_same_network() {
     };
     let (pc, odin) = (start("PC"), start("Odin"));
     // No one is showing a code yet.
-    assert!(matches!(odin.join("2345-6789"), Err(Error::SourceUnavailable(_))));
+    let nobody = odin.join("2345-6789");
+    assert!(matches!(nobody, Err(Error::SourceUnavailable(_))), "{nobody:?}");
     let invitation = pc.invite().unwrap();
     assert_eq!(invitation.short.len(), 9);
     // A wrong short code is refused, a lowercase right one works.
-    assert!(matches!(odin.join("2345-6789"), Err(Error::PermissionLost(_))));
+    let wrong = odin.join("2345-6789");
+    assert!(matches!(wrong, Err(Error::PermissionLost(_))), "{wrong:?}");
     assert_eq!(odin.join(&invitation.short.to_lowercase()).unwrap(), "PC");
     assert_eq!(pc.peers().unwrap()[0].name, "Odin");
 }

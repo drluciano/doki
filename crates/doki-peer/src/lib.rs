@@ -721,9 +721,15 @@ impl PeerNode {
                 let _ = socket.send_to(LAN_QUERY, t).await;
             }
             let until = tokio::time::Instant::now() + Duration::from_millis(700);
-            while let Ok(Ok((n, _))) =
-                tokio::time::timeout_at(until, socket.recv_from(&mut buf)).await
-            {
+            loop {
+                let n = match tokio::time::timeout_at(until, socket.recv_from(&mut buf)).await {
+                    Err(_) => break,
+                    Ok(Ok((n, _))) => n,
+                    // Windows reports an unanswered datagram (ICMP port
+                    // unreachable) as an error on the next receive; replies
+                    // from other targets may still be on their way.
+                    Ok(Err(_)) => continue,
+                };
                 if let Ok(inv) = serde_json::from_slice::<Invite>(&buf[..n]) {
                     if inv.id != self.ctx.me {
                         found.entry(inv.id.clone()).or_insert(inv);
