@@ -18,11 +18,11 @@ Changes requested returns the same story to Engineering or Designing; Blocked re
 - Designer handoff: flows, actual mockups for UI stories, all states, responsive behavior, motion, accessibility and design acceptance criteria. A prose design proposal alone is not visual approval.
 - Engineering ready: dependencies accepted and merged; criteria stable; design complete where applicable; uncertainties resolved or isolated into a spike; validation and documentation identified.
 - Engineering handoff: linked PR and exact commit, criterion-to-evidence checklist, test results, runnable artifact/demo instructions where applicable, screenshots/video for UI, limitations and recovery instructions.
-- PR review: independent quick check of the full diff, issue scope, safety, documentation, validation and current mergeability; technical PASS permits owner handoff, while defects/conflicts return to the same Engineer. WAITING means incomplete/pending evidence, draft status or unknown mergeability. See docs/roles/pr-reviewer.md.
+- PR review: independent quick check of the full diff, issue scope, safety, documentation, validation and current mergeability; technical PASS permits authorized PR readiness/merge and owner story handoff, while defects/conflicts return to the same Engineer. WAITING means incomplete/pending evidence, draft status or unknown mergeability. See docs/roles/pr-reviewer.md.
 - Owner review: explicit acceptance recorded by the owner on the issue or PR for the reviewed revision, or directly in the coordinating chat with a link recorded in the handoff. Material changes invalidate acceptance.
 - Done: owner acceptance exists, required checks pass, PR merged, documentation updated and owner marks the issue complete. Agents do not close stories automatically. Avoid `Closes #N` PR keywords; use `Refs #N`.
 
-No automatic merging, next-story dispatch or issue completion without the relevant owner action. Changes to acceptance criteria after engineering starts require owner agreement. Empty checkboxes are not evidence of completion.
+The owner authorizes automatic PR readiness and merge after technical PASS and satisfied repository requirements. Next-story dispatch and issue completion still require the owner's story acceptance. Changes to acceptance criteria after engineering starts require owner agreement. Empty checkboxes are not evidence of completion.
 
 ## GitHub setup
 
@@ -44,10 +44,20 @@ All story criteria evidenced; relevant safety and regression checks pass; owner 
 
 ## PR Reviewer routing
 
-The owner requested a dedicated PR Reviewer. Technical approval never accepts a story, merges a PR, closes an issue or frees the engineering WIP gate. The Orchestrator dispatches the Reviewer at engineer handoff and again after corrections or base changes. Confirmed merge conflicts return to the Engineer; unknown mergeability or failing checks are recorded separately. The Reviewer does not fix its own findings.
+The owner requested a dedicated PR Reviewer. Technical approval does not accept a story, close an issue or free the engineering WIP gate. The owner's standing authorization permits the Reviewer to mark ready and merge a technically passing PR when repository rules allow. The Orchestrator dispatches the Reviewer at engineer handoff and again after corrections or base changes. Confirmed merge conflicts return to the Engineer; unknown mergeability or failing checks are recorded separately. The Reviewer does not fix its own findings.
 
-Review decisions record the exact head and base commit SHAs, check status, scope and evidence limits. New commits, changed base or material evidence invalidate the prior technical decision until rechecked. Draft research can receive feedback but stays WAITING for owner handoff until its scope/evidence is complete and it is marked ready.
+Review decisions record the exact head and base commit SHAs, check status, scope and evidence limits. New commits, changed base or material evidence invalidate the prior technical decision until rechecked. An unfinished draft or owner-held PR stays WAITING; a completed draft may be marked ready under the owner's standing authorization. A complete, explicitly scoped research PR can receive technical PASS and be marked ready or merged with authorization even while its parent story remains incomplete. Merging such a PR does not close the story or free the engineering gate.
 
-When an independent eligible reviewer identity exists, submit a GitHub APPROVE or REQUEST_CHANGES review as appropriate. The current connection authors as drluciano, including agent PRs, so a formal self-approval cannot be used. Record an explicitly agent-authored technical verdict as a PR comment; never call it a GitHub approval or impersonate the owner's acceptance. A separate bot/app connection is required for formal independent reviews. Do not grant new credentials or change bypass permissions to work around this.
+When an independent eligible reviewer identity exists, submit a GitHub APPROVE or REQUEST_CHANGES review as appropriate. The current connection authors as drluciano, including agent PRs, so a formal self-approval cannot be used. Record an explicitly agent-authored technical verdict as a PR comment; never call it a GitHub approval or impersonate the owner's acceptance. A separate bot/app connection is needed only when an actual rule requires a distinct formal reviewer. It is not required merely to mark ready or merge. Do not grant new credentials or change bypass permissions to work around this.
 
-This is per-run orchestration. No always-on PR watcher, scheduled review, Actions runner or server-enforced WIP control is installed by these documents. Owner-requested workflow configuration changes may be prepared for review while F01 remains the sole application story; this does not authorize a second application implementation.
+The owner has authorized a one-minute pending-work heartbeat for all roles. It resumes orchestration subject to the same acceptance and WIP gates; these documents do not install a separate Actions runner or server-enforced WIP control. Owner-requested workflow configuration changes may be prepared for review while F01 remains the sole application story; this does not authorize a second application implementation.
+
+## Shared-identity clarification
+
+Marking a PR ready, technically reviewing it, merging it, and accepting a story are distinct actions. The shared drluciano identity can mark its PR ready and merge it when repository rules and the owner's authorization allow. GitHub's restriction on approving one's own PR applies to the formal APPROVE review action only; it is not a blanket block on readiness or merge. A separate identity is optional unless an actual required-review rule needs an independent approval.
+
+Owner story acceptance remains human-controlled. A user-performed readiness/merge action is evidence of that PR action, not automatic proof that every criterion of its parent story is satisfied.
+
+## Reviewer merge authorization
+
+Standing owner authorization: the PR Reviewer marks a PR ready and merges it when its explicitly stated scope is complete, relevant checks/evidence are satisfactory, GitHub reports clean mergeability, and no blocking discrepancies remain. Immediately before merge, recheck the current head/base, checks and repository requirements, and use the expected-head SHA safeguard. Do not bypass repository rules. This authorization applies to PR readiness and merge, including scoped partial-research PRs; story acceptance and completion remain with the owner, and engineering stays on the current story until that acceptance.
