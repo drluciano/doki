@@ -61,6 +61,12 @@ pub fn now_rfc3339() -> String {
     humantime::format_rfc3339_seconds(SystemTime::now()).to_string()
 }
 
+/// Parse a time written by [`now_rfc3339`]. Times only ever decide
+/// retention, never which save wins.
+pub fn parse_rfc3339(s: &str) -> Option<SystemTime> {
+    humantime::parse_rfc3339_weak(s).ok()
+}
+
 fn io_err(context: impl Into<String>) -> impl FnOnce(io::Error) -> Error {
     let context = context.into();
     move |e| Error::io(context, Side, e)
@@ -270,6 +276,28 @@ impl Vault {
         Ok(id)
     }
 
+    /// Store a checkpoint whose files this vault will not hold: received as
+    /// history only, from a device that no longer keeps them. The engine
+    /// records it as pruned so nothing tries to read its files. Idempotent.
+    pub fn put_checkpoint_metadata(&self, cp: &Checkpoint) -> Result<CheckpointId> {
+        cp.validate()?;
+        let id = cp.id();
+        let path = self.checkpoint_path(&id);
+        if !path.is_file() {
+            self.write_atomic(&path, &serde_json::to_vec_pretty(cp).unwrap())?;
+        }
+        Ok(id)
+    }
+
+    /// Delete a checkpoint's metadata. Its objects stay until a sweep.
+    pub fn delete_checkpoint(&self, id: &CheckpointId) -> Result<()> {
+        match fs::remove_file(self.checkpoint_path(id)) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(io_err("deleting checkpoint")(e)),
+        }
+    }
+
     /// Load a checkpoint, confirming its content still hashes to its id.
     pub fn checkpoint(&self, id: &CheckpointId) -> Result<Checkpoint> {
         let path = self.checkpoint_path(id);
@@ -401,16 +429,30 @@ impl Vault {
     /// Requires the caller to hold every bundle lock and the global vault
     /// lock so no capture or receive is midway. Returns bytes freed.
     pub fn sweep_unreferenced(&self, keep: &HashSet<ContentHash>) -> Result<u64> {
-        let mut referenced: HashSet<ContentHash> = keep.clone();
-        for (_, cp) in self.checkpoints()? {
-            referenced.extend(cp.files.into_iter().map(|f| f.hash));
-        }
         let mut freed = 0u64;
         for entry in fs::read_dir(self.root.join("tmp")).map_err(io_err("listing tmp"))? {
             let entry = entry.map_err(io_err("listing tmp"))?;
             freed += entry.metadata().map(|m| m.len()).unwrap_or(0);
             let _ = fs::remove_file(entry.path());
         }
+        Ok(freed + self.sweep_objects(keep, &HashSet::new())?)
+    }
+
+    /// Remove objects that no checkpoint outside `without` references and
+    /// that are not in `keep`. Returns bytes freed. Callers hold the
+    /// exclusive "gc" lock, so no capture or import is adding objects.
+    pub fn sweep_objects(
+        &self,
+        keep: &HashSet<ContentHash>,
+        without: &HashSet<CheckpointId>,
+    ) -> Result<u64> {
+        let mut referenced: HashSet<ContentHash> = keep.clone();
+        for (id, cp) in self.checkpoints()? {
+            if !without.contains(&id) {
+                referenced.extend(cp.files.into_iter().map(|f| f.hash));
+            }
+        }
+        let mut freed = 0u64;
         for shard in fs::read_dir(self.root.join("objects")).map_err(io_err("listing objects"))? {
             let shard = shard.map_err(io_err("listing objects"))?;
             if !shard.file_type().map(|t| t.is_dir()).unwrap_or(false) {

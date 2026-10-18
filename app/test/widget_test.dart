@@ -2,6 +2,7 @@ import 'package:doki/backend.dart';
 import 'package:doki/main.dart';
 import 'package:doki/screens/devices.dart';
 import 'package:doki/screens/game.dart';
+import 'package:doki/screens/history.dart';
 import 'package:doki/screens/review.dart';
 import 'package:doki/state.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +32,12 @@ Map<String, dynamic Function(Map<String, dynamic>)> ready(List<Map<String, dynam
   'unmapped': (_) => [],
   'peer_list': (_) => [],
   'relay_code': (_) => null,
+  'settings': (_) => {
+    'keep_days': null,
+    'notify_checkpoints': true,
+    'notify_changes': true,
+    'notify_incoming': true,
+  },
 };
 
 void main() {
@@ -404,6 +411,165 @@ void main() {
       expect(backend.calls.where((c) => c == 'games').length, before + 1);
       expect(backend.calls, isNot(contains('use')), reason: 'automatic checkpoints never install');
       state.dispose();
+    });
+  });
+
+  group('cleanup and notifications', () {
+    setUp(() {
+      final view = TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(800, 2000);
+      view.devicePixelRatio = 1;
+    });
+    tearDown(() => TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!.reset());
+
+    Map<String, dynamic> entry(String id, {bool head = false, bool removed = false}) => {
+      'id': id,
+      'checkpoint': checkpoint(),
+      'is_head': head,
+      'is_tip': head,
+      'set_aside': false,
+      'pinned': false,
+      'files_removed': removed,
+    };
+
+    testWidgets('a checkpoint can be deleted from history, never the current save', (tester) async {
+      final log = <String>[];
+      final handlers = ready([game('protected')])
+        ..['history'] = ((_) => [entry('c00', removed: true), entry('c0'), entry('c1', head: true)])
+        ..['recovery_status'] = ((_) => null)
+        ..['delete_checkpoint'] = ((args) {
+          log.add('delete ${args['checkpoint']}');
+          return {'checkpoints': 1, 'bytes': 2048};
+        });
+      await pump(tester, FakeBackend(handlers), home: const GameScreen(gameId: 'b1'));
+      expect(find.byTooltip('Checkpoint actions'), findsNWidgets(2), reason: 'deleted ones hidden');
+      expect(find.text(removedLine(1)), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Checkpoint actions').first);
+      await tester.pumpAndSettle();
+      final current = tester.widget<PopupMenuItem<String>>(
+        find.widgetWithText(PopupMenuItem<String>, 'Delete (not the current save)'),
+      );
+      expect(current.enabled, isFalse);
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Checkpoint actions').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete from this device'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('other devices keep their copies'), findsOneWidget);
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(log, ['delete c0']);
+    });
+
+    testWidgets('a shorter retention time shows what goes before deleting', (tester) async {
+      final log = <String>[];
+      int? keep;
+      final handlers = ready([game('protected')])
+        ..['settings'] = ((_) => {'keep_days': keep})
+        ..['retention_preview'] = ((args) => {'checkpoints': 3, 'bytes': 2048})
+        ..['set_settings'] = ((args) {
+          log.add('keep ${args['keep_days']}');
+          keep = args['keep_days'] as int?;
+          return {'keep_days': keep};
+        })
+        ..['apply_retention'] = ((_) {
+          log.add('apply');
+          return {'checkpoints': 3, 'bytes': 2048};
+        });
+      await pump(tester, FakeBackend(handlers), home: const HistoryScreen());
+      expect(find.text('Forever'), findsOneWidget);
+      await tester.tap(find.text('Keep checkpoints for'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('30 days'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete 3 old checkpoints?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(log, isEmpty, reason: 'nothing changes without confirming');
+
+      await tester.tap(find.text('Keep checkpoints for'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('30 days'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(log, ['keep 30', 'apply']);
+      expect(find.text('30 days'), findsOneWidget);
+    });
+
+    testWidgets('a removed game can be deleted from this device', (tester) async {
+      final log = <String>[];
+      var unmapped = [
+        {'bundle_id': 'b9', 'name_hint': 'Ruby', 'from_device': 'PC', 'has_progress': true},
+      ];
+      final handlers = ready([])
+        ..['unmapped'] = ((_) => unmapped)
+        ..['forget'] = ((args) {
+          log.add('forget ${args['game']}');
+          unmapped = [];
+          return {'checkpoints': 2, 'bytes': 10};
+        });
+      await pump(tester, FakeBackend(handlers));
+      expect(find.text('Ruby'), findsOneWidget);
+      await tester.tap(find.byTooltip('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete from this device'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('save folder is not touched'), findsOneWidget);
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(log, ['forget b9']);
+      expect(find.text('Ruby'), findsNothing);
+    });
+
+    testWidgets('changes, checkpoints and arrivals notify as chosen', (tester) async {
+      var outcome = 'detected';
+      var incoming = <Map<String, dynamic>>[];
+      var notifyChanges = true;
+      final handlers = ready([game('uncaptured_changes')])
+        ..['incoming'] = ((_) => incoming)
+        ..['settings'] = ((_) => {'notify_changes': notifyChanges})
+        ..['auto_check'] = ((_) => [
+          {'bundle_id': 'b1', 'name': 'Emerald', 'outcome': outcome},
+        ]);
+      final backend = FakeBackend(handlers);
+      final state = AppState(backend);
+      await state.refresh();
+      await state.autoCheck();
+      expect(backend.notifications.single.$2, 'New progress in Emerald');
+
+      outcome = 'created';
+      await state.autoCheck();
+      expect(backend.notifications.last.$2, 'Checkpoint saved');
+      expect(backend.notifications.last.$1, 'game:b1', reason: 'replaces the earlier one');
+
+      incoming = [
+        {
+          'proposal': {
+            'bundle_id': 'b1',
+            'checkpoint': 'c7',
+            'from_device': 'Odin',
+            'received_at': '2026-10-18T10:00:00Z',
+            'status': 'reviewable',
+          },
+          'checkpoint': checkpoint(),
+          'relation': {'kind': 'ahead'},
+        },
+      ];
+      await state.refresh();
+      expect(backend.notifications.last.$2, 'Progress from Odin');
+      final count = backend.notifications.length;
+      await state.refresh();
+      expect(backend.notifications.length, count, reason: 'each arrival notifies once');
+
+      notifyChanges = false;
+      await state.refresh();
+      outcome = 'detected';
+      await state.autoCheck();
+      expect(backend.notifications.length, count, reason: 'turned off');
     });
   });
 }

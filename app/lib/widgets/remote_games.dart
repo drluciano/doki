@@ -34,7 +34,26 @@ class RemoteGamesSection extends StatelessWidget {
               leading: GameBadge(u.nameHint, size: 40),
               title: Text(u.nameHint),
               subtitle: Text(remoteGameLine(u, thisDevice: state.deviceName)),
-              trailing: const Icon(Icons.add_circle_outline, color: DokiColors.lavender),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add_circle_outline, color: DokiColors.lavender),
+                  PopupMenuButton<String>(
+                    tooltip: 'More',
+                    onSelected: (_) => confirmForgetGame(context, u),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'forget',
+                        child: Text(
+                          u.fromDevice == state.deviceName
+                              ? 'Delete from this device'
+                              : 'Don\'t set up on this device',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
               onTap: () => onPicked != null
                   ? onPicked!(u)
                   : Navigator.push(
@@ -53,3 +72,33 @@ String remoteGameLine(Unmapped u, {String? thisDevice}) => u.fromDevice == thisD
     : u.hasProgress
     ? 'Progress arrived from ${u.fromDevice}. Choose where it saves here to review it.'
     : 'Set up on ${u.fromDevice}. Choose where it saves here to keep them in step.';
+
+/// Ask, then delete a game that is not set up here, with its checkpoints,
+/// from this device. Other devices keep theirs; Doki stops listing it.
+Future<void> confirmForgetGame(BuildContext context, Unmapped u) async {
+  final state = AppScope.read(context);
+  final removedHere = u.fromDevice == state.deviceName;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(removedHere ? 'Delete ${u.nameHint}?' : 'Hide ${u.nameHint} on this device?'),
+      content: Text(
+        removedHere
+            ? 'Its checkpoints are deleted from this device and it is no longer listed here. '
+                  'Your save folder is not touched, and your other devices keep their copies.'
+            : 'It stays set up on ${u.fromDevice}. This device stops listing it and deletes any '
+                  'of its progress that already arrived here.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(removedHere ? 'Delete' : 'Hide'),
+        ),
+      ],
+    ),
+  );
+  if (ok == true && context.mounted) {
+    await guarded(context, () => state.forgetGame(u.gameId));
+  }
+}

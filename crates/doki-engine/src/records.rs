@@ -13,6 +13,9 @@ pub(crate) const PROPOSALS: &str = "proposals";
 pub(crate) const JOURNALS: &str = "journals";
 pub(crate) const UNMAPPED: &str = "unmapped";
 pub(crate) const WATCH: &str = "watch";
+pub(crate) const PRUNED: &str = "pruned";
+pub(crate) const FORGOTTEN: &str = "forgotten";
+pub(crate) const SETTINGS: &str = "settings";
 
 pub const JOURNAL_FORMAT: u32 = 1;
 
@@ -90,6 +93,58 @@ pub struct UnmappedBundle {
 
 fn yes() -> bool {
     true
+}
+
+/// A checkpoint whose files this device no longer keeps. Key: checkpoint id.
+///
+/// The checkpoint itself (its parents and file list) stays in the vault, so
+/// ancestry still decides how other checkpoints relate (section 7). Only the
+/// file contents are gone; the checkpoint can no longer be used or restored
+/// here, and packages carry it as metadata only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PrunedCheckpoint {
+    pub bundle_id: BundleId,
+    pub removed_at: String,
+}
+
+/// A game the user deleted from this device after removing it. Key: bundle
+/// id. Doki ignores it from then on: other devices' offers and announcements
+/// for it are not listed or stored here. Undone with `Engine::unforget_game`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ForgottenGame {
+    pub bundle_id: BundleId,
+    pub name: String,
+    pub forgotten_at: String,
+}
+
+/// Choices that apply to the whole vault on this device. Key: `device`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Settings {
+    /// Remove the files of checkpoints older than this many days. `None`
+    /// (the default) keeps every checkpoint. See `Engine::apply_retention`
+    /// for what is always kept.
+    #[serde(default)]
+    pub keep_days: Option<u32>,
+    /// Tell the user when an automatic checkpoint is saved.
+    #[serde(default = "yes")]
+    pub notify_checkpoints: bool,
+    /// Tell the user when a save folder starts changing.
+    #[serde(default = "yes")]
+    pub notify_changes: bool,
+    /// Tell the user when progress from another device arrives.
+    #[serde(default = "yes")]
+    pub notify_incoming: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            keep_days: None,
+            notify_checkpoints: true,
+            notify_changes: true,
+            notify_incoming: true,
+        }
+    }
 }
 
 /// Why an install is running.

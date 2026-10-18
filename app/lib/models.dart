@@ -54,10 +54,15 @@ class HistoryEntry {
       isHead = json['is_head'] == true,
       isTip = json['is_tip'] == true,
       setAside = json['set_aside'] == true,
-      pinned = json['pinned'] == true;
+      pinned = json['pinned'] == true,
+      filesRemoved = json['files_removed'] == true;
 
   final Checkpoint checkpoint;
   final bool isHead, isTip, setAside, pinned;
+
+  /// This device deleted the checkpoint's files (by hand or past the
+  /// retention time). It stays in the engine's history for ancestry only.
+  final bool filesRemoved;
 }
 
 /// How incoming progress relates to this device's current save.
@@ -105,6 +110,35 @@ class Unmapped {
   /// checkpoint yet.
   final bool hasProgress;
 }
+
+/// Choices for this device (engine `settings`).
+class Settings {
+  const Settings({
+    this.keepDays,
+    this.notifyCheckpoints = true,
+    this.notifyChanges = true,
+    this.notifyIncoming = true,
+  });
+
+  Settings.fromJson(Map<String, dynamic> json)
+    : keepDays = json['keep_days'] as int?,
+      notifyCheckpoints = json['notify_checkpoints'] as bool? ?? true,
+      notifyChanges = json['notify_changes'] as bool? ?? true,
+      notifyIncoming = json['notify_incoming'] as bool? ?? true;
+
+  /// Days checkpoints are kept; null keeps them forever (the default).
+  final int? keepDays;
+  final bool notifyCheckpoints, notifyChanges, notifyIncoming;
+}
+
+/// The retention choices the app offers, in days; null is forever.
+const retentionChoices = <int?>[null, 365, 90, 30, 7];
+
+String retentionLabel(int? days) => switch (days) {
+  null => 'Forever',
+  365 => '1 year',
+  final d => '$d days',
+};
 
 /// A review result. [json] must be passed back unchanged to `use`.
 class Review {

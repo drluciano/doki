@@ -29,6 +29,14 @@
 //! | `recovery_status` | `game` | `RecoveryStatus` or `null` |
 //! | `recover` | `game`, `action`: `finish` or `put_back` | `RecoveryOutcome` |
 //! | `pin`, `unpin` | `game`, `checkpoint` | `null` |
+//! | `delete_checkpoint` | `game`, `checkpoint` | `{checkpoints, bytes}`; this device only, files only (history keeps its place) |
+//! | `settings` | – | `Settings` (`keep_days`, `notify_checkpoints`, `notify_changes`, `notify_incoming`) |
+//! | `set_settings` | any `Settings` field; `keep_days: null` keeps forever | `Settings`; never removes anything by itself |
+//! | `retention_preview` | `keep_days` | `{checkpoints, bytes}` that keeping `keep_days` days would remove |
+//! | `apply_retention` | – | `{checkpoints, bytes}` removed now under the chosen time |
+//! | `forget` | `game` (bundle id of a removed game) | `{checkpoints, bytes}`; deletes it from this device, other devices keep theirs |
+//! | `forgotten` | – | `[ForgottenGame]` |
+//! | `unforget` | `game` (bundle id) | `null`; it comes back with the next sync |
 //! | `relay_create` | `url` | `{pairing_code}` |
 //! | `relay_join` | `code` | `null` |
 //! | `relay_code` | – | `{pairing_code}` or `null` |
@@ -58,7 +66,9 @@ use std::time::Duration;
 const AUTO_SETTLE_SECS: u64 = 30;
 
 use doki_core::{BundleId, CaptureMode, CheckpointId, Error, Result};
-use doki_engine::{BundleChanges, Engine, LocationProvider, RecoveryAction, Review};
+use doki_engine::{
+    BundleChanges, Engine, LocationProvider, RecoveryAction, Review, SettingsChanges,
+};
 use doki_peer::{Network, PeerNode};
 use doki_vault::Vault;
 use serde::Deserialize;
@@ -131,6 +141,23 @@ enum Request {
     Unpin {
         game: String,
         checkpoint: String,
+    },
+    DeleteCheckpoint {
+        game: String,
+        checkpoint: String,
+    },
+    Settings,
+    SetSettings(SettingsChanges),
+    RetentionPreview {
+        keep_days: u32,
+    },
+    ApplyRetention,
+    Forget {
+        game: String,
+    },
+    Forgotten,
+    Unforget {
+        game: String,
     },
     RelayCreate {
         url: String,
@@ -291,6 +318,20 @@ fn dispatch<P: LocationProvider>(vault_path: &str, provider: P, req: Request) ->
         Request::Unpin { game: g, checkpoint } => {
             let g = game(&g)?;
             engine.set_pinned(&g, &cp(&g, &checkpoint)?, false)?;
+            Ok(Value::Null)
+        }
+        Request::DeleteCheckpoint { game: g, checkpoint } => {
+            let g = game(&g)?;
+            to_value(engine.delete_checkpoint(&g, &cp(&g, &checkpoint)?)?)
+        }
+        Request::Settings => to_value(engine.settings()?),
+        Request::SetSettings(changes) => to_value(engine.update_settings(changes)?),
+        Request::RetentionPreview { keep_days } => to_value(engine.retention_preview(keep_days)?),
+        Request::ApplyRetention => to_value(engine.apply_retention()?),
+        Request::Forget { game: g } => to_value(engine.forget_game(&BundleId::parse(&g)?)?),
+        Request::Forgotten => to_value(engine.forgotten_games()?),
+        Request::Unforget { game: g } => {
+            engine.unforget_game(&BundleId::parse(&g)?)?;
             Ok(Value::Null)
         }
         Request::RelayCreate { url } => {

@@ -153,8 +153,11 @@ Each adapter reports how it replaces a file (`ReplaceMode`): `Atomic` (rename ov
 ## 7. Retention, cleanup and deletion
 
 - Pinned checkpoints are protected from any future cleanup.
-- **[default]** There is no automatic deletion of checkpoints in the MVP. `clean` removes only temporary files and objects no checkpoint references.
-- Checkpoint cleanup (C06) must: compute roots (pins, heads, tips, set-aside checkpoints, open journals, pending proposals, in-flight transfers) under the bundle locks; preview what goes; keep ancestry metadata; and never be triggered by missing folders, remote absence or a full disk.
+- **[default]** Checkpoints are kept forever. Nothing is deleted automatically unless the user picks a retention time. `clean` removes only temporary files and objects no checkpoint references.
+- **Deleting a checkpoint** (`Engine::delete_checkpoint`) and **retention** (`Engine::apply_retention`, a time the user chose under "Keep checkpoints for") remove only a checkpoint's *files* on this device. The checkpoint record (parents, file list) stays, so ancestry keeps deciding how other checkpoints relate; the checkpoint is marked as having its files removed and can no longer be used or restored here. Packages carry such checkpoints as history only (`without_files`), and a receiver that lacks their files marks them the same way, so a later handoff still fast-forwards instead of looking like a conflict.
+  - Deleting by hand is refused for the current save, pinned checkpoints and incoming progress still waiting for a decision.
+  - Retention runs under the vault's exclusive cleanup lock and every bundle lock, previews what goes before the user confirms a shorter time, and always keeps per game: the 10 newest checkpoints by ancestry, the current save, pins, history tips, set-aside progress and choices, pending proposals and anything an install journal refers to. Capture times only decide what counts as old, never which save wins. It runs after the user confirms, and after automatic checkpoints, never because a folder is missing, another device is absent or the disk is full.
+- **Deleting a removed game** (`Engine::forget_game`) is only for games not set up here. It deletes the game's checkpoints, their files and any proposals on this device, and records the game as forgotten so offers and announcements from other devices are ignored, until `unforget`. The save folder is never touched.
 - **Removing a game** (`Engine::remove_bundle`) only removes its setup on this device: the save folder is untouched, every checkpoint stays in the vault, reviewable offers are dropped (they come back with the next sync) and the game is listed for setup again, which brings its history back. Refused while an install waits for recovery. Editing a game (name, folder, automatic checkpoints) never reads or writes save files; after a folder change the next capture records the new folder's contents as a child of head.
 - Deleting is local to the device by default. Deleting everywhere will be an explicit, reviewed request; no device acts on it automatically.
 
@@ -237,4 +240,4 @@ No platform claim is made beyond this table. Supported emulators are listed only
 | Relay client, pairing, encryption | `crates/doki-sync` | wrong key, tampering, relay stores only ciphertext, two-device handoff |
 | Command line | `crates/doki-cli` | `tests/handoff.rs`: the end-to-end milestone, by file and by relay |
 
-Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter on real hardware, peer sync between real Android and Windows devices, per-device relay keys, and checkpoint cleanup (C06).
+Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter on real hardware, peer sync between real Android and Windows devices, and per-device relay keys. Deleting and retention are covered by engine tests (files removed, records kept, ancestry intact across a handoff).

@@ -52,6 +52,13 @@ class AppState extends ChangeNotifier {
   /// Whether Doki starts when the user signs in; null where not managed.
   bool? startWithSystem;
 
+  /// Retention and notification choices for this device.
+  Settings settings = const Settings();
+
+  /// Incoming progress already seen, so only new arrivals notify. Null
+  /// until the first refresh, which seeds it without notifying.
+  Set<String>? _seenIncoming;
+
   Timer? _timer;
   Timer? _checkTimer;
   bool _checking = false;
@@ -93,6 +100,12 @@ class AppState extends ChangeNotifier {
       ];
       final code = await backend.call('relay_code');
       pairingCode = code == null ? null : code['pairing_code'] as String;
+      try {
+        settings = Settings.fromJson(await backend.call('settings') as Map<String, dynamic>);
+      } on DokiError {
+        settings = const Settings(); // An engine without settings yet.
+      }
+      _notifyNewIncoming();
       loadError = null;
     } catch (e) {
       loadError = e;
@@ -171,18 +184,67 @@ class AppState extends ChangeNotifier {
     unawaited(_quietSync());
   }
 
-  /// Look for settled changes now. Refreshes when a checkpoint was taken.
+  /// Look for settled changes now. Refreshes when a checkpoint was taken,
+  /// and notifies about changes found and checkpoints saved as the user
+  /// chose in [settings].
   Future<void> autoCheck() async {
     if (!initialized || games.isEmpty || _checking) return;
     _checking = true;
     try {
-      final checks = await backend.call('auto_check') as List;
-      if (checks.any((c) => (c as Map)['outcome'] == 'created')) await refresh();
+      final checks = (await backend.call('auto_check') as List).cast<Map<String, dynamic>>();
+      for (final c in checks) {
+        final key = 'game:${c['bundle_id']}';
+        final name = c['name'] as String;
+        if (c['outcome'] == 'detected' && settings.notifyChanges) {
+          await backend.notify(
+            key,
+            'New progress in $name',
+            'Doki will save a checkpoint once the game stops writing.',
+          );
+        } else if (c['outcome'] == 'created' && settings.notifyCheckpoints) {
+          await backend.notify(key, 'Checkpoint saved', '$name is protected up to now.');
+        }
+      }
+      if (checks.any((c) => c['outcome'] == 'created')) await refresh();
     } catch (_) {
       // Per-game problems already show as the game's status.
     } finally {
       _checking = false;
     }
+  }
+
+  void _notifyNewIncoming() {
+    final now = {for (final i in incoming) '${i.gameId}.${i.checkpoint.id}'};
+    final seen = _seenIncoming;
+    _seenIncoming = now;
+    if (seen == null || !settings.notifyIncoming) return;
+    for (final i in incoming) {
+      if (seen.contains('${i.gameId}.${i.checkpoint.id}')) continue;
+      final name = game(i.gameId)?.name ?? 'a game';
+      unawaited(
+        backend.notify(
+          'incoming:${i.gameId}',
+          'Progress from ${i.fromDevice}',
+          'New progress for $name is waiting in Incoming. Nothing changes until you choose.',
+        ),
+      );
+    }
+  }
+
+  /// Change notification choices or the retention time. A shorter
+  /// retention time takes effect at once (the caller shows a preview first).
+  Future<void> updateSettings(Map<String, dynamic> changes) async {
+    settings = Settings.fromJson(
+      await backend.call('set_settings', changes) as Map<String, dynamic>,
+    );
+    if (changes.containsKey('keep_days')) await backend.call('apply_retention');
+    notifyListeners();
+  }
+
+  /// Delete a removed game and its checkpoints from this device.
+  Future<void> forgetGame(String id) async {
+    await backend.call('forget', {'game': id});
+    await refresh();
   }
 
   Future<void> setBackgroundWatching(bool on) async {

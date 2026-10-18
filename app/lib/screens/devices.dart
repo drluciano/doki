@@ -143,6 +143,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
                     ),
                   ),
                 const SizedBox(height: 16),
+                _Notifications(state: state),
+                const SizedBox(height: 16),
                 _YourDevices(state: state, onSync: _sync, onRemove: _remove),
                 const SizedBox(height: 16),
                 _addDevice(context, state),
@@ -476,6 +478,69 @@ class _RelaySectionState extends State<_RelaySection> {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// What Doki tells you about with a system notification on this device.
+class _Notifications extends StatelessWidget {
+  const _Notifications({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final s = state.settings;
+    Widget toggle(String title, String subtitle, bool value, String field) => SwitchListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      value: value,
+      onChanged: (on) => guarded(context, () => state.updateSettings({field: on})),
+      title: Text(title),
+      subtitle: Text(subtitle),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+          child: Text('Notifications', style: text.titleMedium),
+        ),
+        Card(
+          child: Column(
+            children: [
+              toggle(
+                'Checkpoint saved',
+                'When Doki saves a checkpoint on its own.',
+                s.notifyCheckpoints,
+                'notify_checkpoints',
+              ),
+              toggle(
+                'New progress found',
+                'When a save folder starts changing while you play.',
+                s.notifyChanges,
+                'notify_changes',
+              ),
+              toggle(
+                'Progress from your other devices',
+                'When progress arrives and waits in Incoming.',
+                s.notifyIncoming,
+                'notify_incoming',
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+          child: Text(
+            Platform.isWindows
+                ? 'Shown from the Doki icon in the tray, so they need "Keep Doki in the tray" on.'
+                : Platform.isAndroid
+                ? 'Android may ask you to allow notifications for Doki.'
+                : 'This platform does not show notifications yet.',
+            style: text.bodySmall?.copyWith(color: DokiColors.muted, fontSize: 14),
+          ),
+        ),
+      ],
     );
   }
 }

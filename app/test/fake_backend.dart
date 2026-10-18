@@ -35,6 +35,12 @@ class FakeBackend implements DokiBackend {
 
   @override
   Future<void> setStartWithSystem(bool on) async => startsWithSystem = on;
+
+  final List<(String, String, String)> notifications = [];
+
+  @override
+  Future<void> notify(String key, String title, String body) async =>
+      notifications.add((key, title, body));
 }
 
 Map<String, dynamic> checkpoint({

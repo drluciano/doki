@@ -48,6 +48,13 @@ struct PackageIndex {
     offers: Vec<Offer>,
     checkpoints: Vec<Checkpoint>,
     objects: Vec<ObjectRef>,
+    /// Checkpoints carried as history only: the sender removed their files
+    /// (deleted or past its retention time), so no objects are included for
+    /// them. The receiver keeps them for ancestry and marks them removed
+    /// unless it has the files itself. Absent in packages from older
+    /// versions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    without_files: Vec<CheckpointId>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,6 +93,7 @@ impl<P: LocationProvider> Engine<P> {
             return Err(Error::InvalidInput(format!("{} already exists", dest.display())));
         }
         let all = self.vault.checkpoints()?;
+        let pruned = self.pruned_ids()?;
         let mut offers = Vec::new();
         let mut checkpoints = Vec::new();
         for bundle in bundles {
@@ -106,7 +114,12 @@ impl<P: LocationProvider> Engine<P> {
             );
         }
         let mut objects: BTreeMap<ContentHash, u64> = BTreeMap::new();
+        let mut without_files = Vec::new();
         for cp in &checkpoints {
+            if pruned.contains(&cp.id()) {
+                without_files.push(cp.id());
+                continue;
+            }
             self.vault.verify_checkpoint_objects(cp)?;
             for f in &cp.files {
                 objects.insert(f.hash.clone(), f.size);
@@ -120,6 +133,7 @@ impl<P: LocationProvider> Engine<P> {
             offers,
             checkpoints,
             objects: objects.into_iter().map(|(hash, size)| ObjectRef { hash, size }).collect(),
+            without_files,
         };
         let index_bytes = serde_json::to_vec(&index).expect("index serializes");
 
@@ -173,8 +187,19 @@ impl<P: LocationProvider> Engine<P> {
         }
         let mut index_bytes = vec![0u8; index_len as usize];
         r.read_exact(&mut index_bytes).map_err(truncated)?;
-        let index: PackageIndex = serde_json::from_slice(&index_bytes)
+        let mut index: PackageIndex = serde_json::from_slice(&index_bytes)
             .map_err(|e| Error::IntegrityFailed(format!("package index is unreadable: {e}")))?;
+        // Games the user deleted from this device are ignored entirely.
+        let mut forgotten = HashSet::new();
+        let bundles = index.checkpoints.iter().map(|c| &c.bundle_id);
+        for bundle in bundles.chain(index.offers.iter().map(|o| &o.bundle_id)) {
+            if !forgotten.contains(bundle) && self.is_forgotten(bundle)? {
+                forgotten.insert(bundle.clone());
+            }
+        }
+        index.checkpoints.retain(|cp| !forgotten.contains(&cp.bundle_id));
+        index.offers.retain(|o| !forgotten.contains(&o.bundle_id));
+        let without_files: HashSet<CheckpointId> = index.without_files.iter().cloned().collect();
 
         // Validate everything declared before storing anything.
         if index.format != PACKAGE_FORMAT {
@@ -194,6 +219,9 @@ impl<P: LocationProvider> Engine<P> {
         let declared: HashSet<&ContentHash> = index.objects.iter().map(|o| &o.hash).collect();
         for cp in &index.checkpoints {
             cp.validate()?;
+            if without_files.contains(&cp.id()) {
+                continue;
+            }
             for f in &cp.files {
                 if !declared.contains(&f.hash) && !self.vault.has_object(&f.hash) {
                     return Err(Error::IntegrityFailed(format!(
@@ -205,6 +233,11 @@ impl<P: LocationProvider> Engine<P> {
         }
         let ids: HashSet<CheckpointId> = index.checkpoints.iter().map(|c| c.id()).collect();
         for offer in &index.offers {
+            if without_files.contains(&offer.checkpoint) {
+                return Err(Error::IntegrityFailed(
+                    "package offers a checkpoint without its files".into(),
+                ));
+            }
             if !ids.contains(&offer.checkpoint) && !self.vault.has_checkpoint(&offer.checkpoint) {
                 return Err(Error::IntegrityFailed(
                     "package offers a checkpoint it does not carry".into(),
@@ -231,10 +264,19 @@ impl<P: LocationProvider> Engine<P> {
         let mut summary =
             ImportSummary { from_device: index.from_device.clone(), ..Default::default() };
         for cp in &index.checkpoints {
-            if !self.vault.has_checkpoint(&cp.id()) {
-                self.vault.put_checkpoint(cp)?;
-                summary.checkpoints_added += 1;
+            let id = cp.id();
+            if self.vault.has_checkpoint(&id) {
+                continue;
             }
+            if without_files.contains(&id)
+                && !cp.files.iter().all(|f| self.vault.has_object(&f.hash))
+            {
+                self.vault.put_checkpoint_metadata(cp)?;
+                self.mark_pruned(&cp.bundle_id, &id)?;
+            } else {
+                self.vault.put_checkpoint(cp)?;
+            }
+            summary.checkpoints_added += 1;
         }
         if &index.from_device_id == self.vault.device_id() {
             return Ok(summary); // our own package: history only, nothing incoming

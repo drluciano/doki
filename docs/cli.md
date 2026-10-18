@@ -57,6 +57,9 @@ doki use "Emerald" <checkpoint>       # shows the review, asks, then backs up an
 | `dismiss GAME CP` | Keep your save; record the choice | No |
 | `recover GAME [--finish \| --put-back]` | Resolve an interrupted install | **Yes** |
 | `pin` / `unpin GAME CP` | Protect a checkpoint from future cleanup | No |
+| `delete-checkpoint GAME CP [--yes]` | Delete a checkpoint's files from this device; it keeps its place in history | No |
+| `retention [DAYS\|forever] [--yes]` | Show or set how long checkpoints are kept here; previews what goes | No |
+| `forget ID [--yes]` / `unforget ID` | Delete a removed game and its checkpoints from this device / stop ignoring it | No |
 | `export-files GAME CP FOLDER` | Copy a checkpoint's files out of Doki | No (writes FOLDER) |
 | `clean` | Remove temporary leftovers, never checkpoints | No |
 | `devices invite` | Show pairing codes and answer devices that join | No |

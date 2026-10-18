@@ -10,6 +10,7 @@
 #include <shellapi.h>
 
 #include <memory>
+#include <string>
 
 #include "win32_window.h"
 
@@ -25,6 +26,8 @@ constexpr const wchar_t kShowDokiMessage[] = L"DokiShowWindow";
 // Dart talks to it on the "dev.doki/window" channel:
 //   getKeepInTray / setKeepInTray {enabled}     (stored in HKCU\Software\Doki)
 //   getStartWithWindows / setStartWithWindows {enabled}   (HKCU Run key)
+//   notify {key, title, body}  (a notification from the tray icon; false
+//                               when the tray is off)
 // and it calls "sync" on the same channel when Sync now is chosen.
 class FlutterWindow : public Win32Window {
  public:
@@ -48,6 +51,9 @@ class FlutterWindow : public Win32Window {
   void ShowTrayMenu();
   void Open();
   void HideToTray();
+  // Shows a notification from the tray icon. False when there is no icon.
+  bool ShowBalloon(const std::wstring& title, const std::wstring& body,
+                   bool quiet);
   void Quit();
 
   // The project to run.

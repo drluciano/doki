@@ -72,6 +72,10 @@ public class MainActivity extends FlutterActivity {
                 result.success(null);
                 break;
             }
+            case "notify":
+                Notifier.show(this, call.argument("key"), call.argument("title"), call.argument("body"));
+                result.success(null);
+                break;
             case "isWatching":
                 result.success(WatchService.isEnabled(this));
                 break;
@@ -97,14 +101,15 @@ public class MainActivity extends FlutterActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Notifications tell you about checkpoints and incoming progress.
+        askToNotify();
         // Keep checking saves while an emulator is in front, unless turned off.
         if (WatchService.isEnabled(this)) {
-            askToNotify();
             WatchService.setEnabled(this, true);
         }
     }
 
-    /** Android 13+ hides the watching notification unless allowed. */
+    /** Android 13+ shows no notifications unless allowed. */
     private void askToNotify() {
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
