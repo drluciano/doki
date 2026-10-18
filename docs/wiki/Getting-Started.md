@@ -31,6 +31,8 @@ Connecting a folder only records where the save lives. Doki does not change anyt
 
 > Each game should point at the folder holding *that game's* save files. Keep Doki's own storage separate from every save folder; Doki refuses folders that overlap.
 
+Play many games in one emulator? Choose **Whole system** instead and pick the emulator's save folder: every game in it is tracked on its own, and new ones are added automatically. See [Tracking a whole emulator](Tracking-a-Whole-Emulator.md). For covers in your library, see [Game art](Game-Art.md).
+
 ## 4. Create your first checkpoint
 
 1. Close the game in the emulator, so the save is complete.

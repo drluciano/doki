@@ -3,10 +3,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:path_provider/path_provider.dart';
+
+import 'appearance.dart';
+import 'art.dart';
 import 'backend.dart';
 import 'motion.dart';
 import 'screens/devices.dart';
-import 'screens/help.dart';
+import 'screens/settings.dart';
 import 'screens/history.dart';
 import 'screens/incoming.dart';
 import 'screens/library.dart';
@@ -19,14 +23,19 @@ import 'widgets/focus_halo.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final backend = await DokiBackend.forPlatform();
-  final state = AppState(backend, autoSync: true, autoCapture: true)..refresh();
+  final art = await ArtStore.open();
+  final state = AppState(backend, autoSync: true, autoCapture: true, art: art)..refresh();
   if (Platform.isWindows) {
     // "Sync now" in the tray menu (windows/runner/flutter_window.cpp).
     const MethodChannel('dev.doki/window').setMethodCallHandler((call) async {
       if (call.method == 'sync') await state.sync().catchError((_) => null);
     });
   }
-  runApp(DokiApp(state: state));
+  final support = await getApplicationSupportDirectory();
+  final appearance = await Appearance.load(
+    File('${support.path}${Platform.pathSeparator}appearance.json'),
+  );
+  runApp(DokiApp(state: state, appearance: appearance));
 }
 
 /// Makes [AppState] available to every screen.
@@ -41,21 +50,53 @@ class AppScope extends InheritedNotifier<AppState> {
       context.getInheritedWidgetOfExactType<AppScope>()!.notifier!;
 }
 
-class DokiApp extends StatelessWidget {
-  const DokiApp({super.key, required this.state});
+class DokiApp extends StatefulWidget {
+  const DokiApp({super.key, required this.state, this.appearance});
   final AppState state;
+
+  /// Theme and border color. Without one (tests), the defaults are used and
+  /// changes are kept in memory only.
+  final Appearance? appearance;
+
+  @override
+  State<DokiApp> createState() => _DokiAppState();
+}
+
+class _DokiAppState extends State<DokiApp> {
+  late final Appearance _appearance = widget.appearance ?? Appearance();
 
   @override
   Widget build(BuildContext context) {
     return AppScope(
-      state: state,
-      child: MaterialApp(
-        title: 'Doki',
-        theme: dokiTheme(),
-        debugShowCheckedModeBanner: false,
-        navigatorObservers: [FocusHalo.observer],
-        builder: (context, child) => FocusHalo(child: child!),
-        home: const SplashGate(child: RootGate()),
+      state: widget.state,
+      child: AppearanceScope(
+        appearance: _appearance,
+        child: ListenableBuilder(
+          listenable: _appearance,
+          builder: (context, _) {
+            final dark = _appearance.darkPalette;
+            return MaterialApp(
+              title: 'Doki',
+              theme: dokiTheme(DokiPalette.light),
+              darkTheme: dokiTheme(dark),
+              themeMode: _appearance.themeMode,
+              // Switch palettes in one step: Doki's own colors change at
+              // once, so a cross-fade of only the Material parts would look
+              // half-finished.
+              themeAnimationDuration: Duration.zero,
+              debugShowCheckedModeBanner: false,
+              navigatorObservers: [FocusHalo.observer],
+              builder: (context, child) => PaletteSync(
+                darkPalette: dark,
+                child: FocusHalo(
+                  color: _appearance.accent.resolve(Theme.of(context).brightness),
+                  child: child!,
+                ),
+              ),
+              home: const SplashGate(child: RootGate()),
+            );
+          },
+        ),
       ),
     );
   }
@@ -91,7 +132,7 @@ class _ShellState extends State<Shell> {
     (Icons.move_to_inbox_outlined, Icons.move_to_inbox, 'Incoming'),
     (Icons.history_outlined, Icons.history, 'History'),
     (Icons.devices_outlined, Icons.devices, 'Devices'),
-    (Icons.help_outline, Icons.help, 'Help'),
+    (Icons.settings_outlined, Icons.settings, 'Settings'),
   ];
 
   @override
@@ -103,7 +144,7 @@ class _ShellState extends State<Shell> {
       const IncomingScreen(),
       const HistoryScreen(),
       const DevicesScreen(),
-      const HelpScreen(),
+      const SettingsScreen(),
     ];
     Widget icon(int i, bool selected) {
       final d = _destinations[i];
@@ -139,7 +180,7 @@ class _ShellState extends State<Shell> {
                 selectedIndex: _index,
                 onDestinationSelected: (i) => setState(() => _index = i),
                 labelType: NavigationRailLabelType.all,
-                leading: const Padding(
+                leading: Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
                   child: Text(
                     'doki',

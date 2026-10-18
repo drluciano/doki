@@ -79,6 +79,28 @@ std::optional<bool> EnabledArgument(const flutter::EncodableValue* arguments) {
   return *enabled;
 }
 
+std::optional<std::wstring> StringArgument(
+    const flutter::EncodableValue* arguments, const char* name) {
+  const auto* map = std::get_if<flutter::EncodableMap>(arguments);
+  if (map == nullptr) {
+    return std::nullopt;
+  }
+  auto it = map->find(flutter::EncodableValue(name));
+  if (it == map->end()) {
+    return std::nullopt;
+  }
+  const std::string* value = std::get_if<std::string>(&it->second);
+  if (value == nullptr) {
+    return std::nullopt;
+  }
+  int length = MultiByteToWideChar(CP_UTF8, 0, value->data(),
+                                   static_cast<int>(value->size()), nullptr, 0);
+  std::wstring wide(length, L'\0');
+  MultiByteToWideChar(CP_UTF8, 0, value->data(),
+                      static_cast<int>(value->size()), wide.data(), length);
+  return wide;
+}
+
 }  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project,
@@ -129,6 +151,19 @@ bool FlutterWindow::OnCreate() {
             result->Success();
           } else {
             result->Error("Io", "Windows did not save the startup setting");
+          }
+        } else if (method == "notify") {
+          // Shown from the tray icon; with the tray off there is nowhere to
+          // show it, and Dart is told so with false.
+          std::optional<std::wstring> title =
+              StringArgument(call.arguments(), "title");
+          std::optional<std::wstring> body =
+              StringArgument(call.arguments(), "body");
+          if (!title || !body) {
+            result->Error("InvalidInput", "expected {title, body}");
+          } else {
+            result->Success(
+                flutter::EncodableValue(ShowBalloon(*title, *body, false)));
           }
         } else {
           result->NotImplemented();
@@ -254,15 +289,24 @@ void FlutterWindow::HideToTray() {
   if (!told_about_tray_ && tray_icon_added_) {
     // Say once per run where Doki went, so closing does not look like quitting.
     told_about_tray_ = true;
-    NOTIFYICONDATAW info = tray_icon_;
-    info.uFlags = NIF_INFO;
-    wcscpy_s(info.szInfoTitle, L"Doki is still running");
-    wcscpy_s(info.szInfo,
-             L"It keeps saving checkpoints and syncing from the tray. "
-             L"Right-click the icon to quit.");
-    info.dwInfoFlags = NIIF_INFO | NIIF_NOSOUND;
-    Shell_NotifyIconW(NIM_MODIFY, &info);
+    ShowBalloon(L"Doki is still running",
+                L"It keeps saving checkpoints and syncing from the tray. "
+                L"Right-click the icon to quit.",
+                true);
   }
+}
+
+bool FlutterWindow::ShowBalloon(const std::wstring& title,
+                                const std::wstring& body, bool quiet) {
+  if (!tray_icon_added_) {
+    return false;
+  }
+  NOTIFYICONDATAW info = tray_icon_;
+  info.uFlags = NIF_INFO;
+  wcsncpy_s(info.szInfoTitle, title.c_str(), _TRUNCATE);
+  wcsncpy_s(info.szInfo, body.c_str(), _TRUNCATE);
+  info.dwInfoFlags = NIIF_INFO | (quiet ? NIIF_NOSOUND : 0);
+  return Shell_NotifyIconW(NIM_MODIFY, &info) != FALSE;
 }
 
 void FlutterWindow::Quit() {
@@ -281,6 +325,7 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     switch (LOWORD(lparam)) {
       case WM_LBUTTONUP:
       case WM_LBUTTONDBLCLK:
+      case NIN_BALLOONUSERCLICK:
         Open();
         break;
       case WM_RBUTTONUP:

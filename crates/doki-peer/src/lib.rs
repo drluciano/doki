@@ -53,7 +53,7 @@ use std::time::{Duration, Instant};
 use base64::Engine as _;
 use doki_core::error::StorageSide;
 use doki_core::{BundleId, CheckpointId, Error, Result};
-use doki_engine::{Engine, ImportSummary};
+use doki_engine::{Engine, ImportSummary, MemberRef};
 use doki_vault::{now_rfc3339, random_hex, Vault};
 use iroh::endpoint::{presets, Connection, RecvStream, SendStream};
 use iroh::protocol::{AcceptError, ProtocolHandler, Router};
@@ -163,6 +163,13 @@ struct Hello {
     /// offer them for setup before any checkpoint exists.
     #[serde(default)]
     games: BTreeMap<BundleId, String>,
+    /// Whole-system folders set up on this device, by id, with names.
+    #[serde(default)]
+    systems: BTreeMap<BundleId, String>,
+    /// Which of `games` belong to a system, so a linked system on the
+    /// other device sets them up too.
+    #[serde(default)]
+    members: BTreeMap<BundleId, MemberRef>,
 }
 
 /// Result of syncing with one device.
@@ -329,13 +336,21 @@ impl Ctx {
         for (id, cp) in engine.vault().checkpoints()? {
             have.entry(cp.bundle_id).or_default().insert(id);
         }
-        let games = engine.bundles()?.into_iter().map(|b| (b.bundle_id, b.name)).collect();
+        let bundles = engine.bundles()?;
+        let members = bundles
+            .iter()
+            .filter_map(|b| b.member.clone().map(|m| (b.bundle_id.clone(), m)))
+            .collect();
+        let games = bundles.into_iter().map(|b| (b.bundle_id, b.name)).collect();
+        let systems = engine.systems()?.into_iter().map(|s| (s.system_id, s.name)).collect();
         Ok(Hello {
             name: engine.vault().device_name().to_owned(),
             addr: self.my_addr(),
             book: self.book()?,
             have,
             games,
+            systems,
+            members,
         })
     }
 
@@ -454,12 +469,20 @@ async fn session(
         )));
     }
     let (p, name, addr, book) = (peer.clone(), theirs.name.clone(), theirs.addr, theirs.book);
-    let games = theirs.games;
+    let (games, systems, members) = (theirs.games, theirs.systems, theirs.members);
     blocking(ctx, move |c| {
         c.merge(&p, &name, &addr, &book)?;
         let engine = c.engine()?;
+        for (system, system_name) in &systems {
+            engine.note_remote_system(system, system_name, &name)?;
+        }
         for (game, game_name) in &games {
-            engine.note_remote_game(game, game_name, &name)?;
+            match members.get(game) {
+                Some(member) => engine.note_remote_member(game, member, game_name, &name)?,
+                None => {
+                    engine.note_remote_game(game, game_name, &name)?;
+                }
+            }
         }
         Ok(())
     })

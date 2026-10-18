@@ -137,7 +137,7 @@ fn edit_remove_and_auto_check_over_json() {
 
     std::fs::write(save.join("e.sav"), b"one").unwrap();
     let first = ok(vault, json!({"cmd": "auto_check", "settle_secs": 0}));
-    assert_eq!(first[0]["outcome"], "waiting");
+    assert_eq!(first[0]["outcome"], "detected");
     let second = ok(vault, json!({"cmd": "auto_check", "settle_secs": 0}));
     assert_eq!(second[0]["outcome"], "created");
     assert!(second[0]["checkpoint"].is_string());
@@ -153,5 +153,50 @@ fn edit_remove_and_auto_check_over_json() {
     ok(vault, json!({"cmd": "remove", "game": "Ruby"}));
     assert_eq!(ok(vault, json!({"cmd": "games"})), json!([]));
     assert_eq!(std::fs::read(save.join("e.sav")).unwrap(), b"one");
-    assert_eq!(ok(vault, json!({"cmd": "unmapped"}))[0]["name_hint"], "Ruby");
+    let removed = ok(vault, json!({"cmd": "unmapped"}));
+    assert_eq!(removed[0]["name_hint"], "Ruby");
+
+    let id = removed[0]["bundle_id"].as_str().unwrap();
+    assert_eq!(ok(vault, json!({"cmd": "forget", "game": id}))["checkpoints"], 1);
+    assert_eq!(ok(vault, json!({"cmd": "unmapped"})), json!([]));
+    assert_eq!(ok(vault, json!({"cmd": "forgotten"}))[0]["name"], "Ruby");
+    assert_eq!(std::fs::read(save.join("e.sav")).unwrap(), b"one", "the folder is never touched");
+    ok(vault, json!({"cmd": "unforget", "game": id}));
+    assert_eq!(ok(vault, json!({"cmd": "forgotten"})), json!([]));
+}
+
+#[test]
+fn settings_retention_and_deleting_over_json() {
+    let tmp = tempfile::tempdir().unwrap();
+    let vault = tmp.path().join("v");
+    let vault = vault.to_str().unwrap();
+    let save = tmp.path().join("save");
+    std::fs::create_dir_all(&save).unwrap();
+    ok(vault, json!({"cmd": "init", "name": "PC"}));
+    ok(vault, json!({"cmd": "add", "name": "Emerald", "location": save}));
+
+    let defaults = ok(vault, json!({"cmd": "settings"}));
+    assert_eq!(defaults["keep_days"], Value::Null);
+    assert_eq!(defaults["notify_checkpoints"], true);
+    let set = ok(vault, json!({"cmd": "set_settings", "keep_days": 30, "notify_changes": false}));
+    assert_eq!(
+        (set["keep_days"].as_u64(), set["notify_changes"].as_bool()),
+        (Some(30), Some(false))
+    );
+    let forever = ok(vault, json!({"cmd": "set_settings", "keep_days": null}));
+    assert_eq!(forever["keep_days"], Value::Null);
+    assert_eq!(forever["notify_changes"], false, "fields not sent are kept");
+    assert_eq!(ok(vault, json!({"cmd": "retention_preview", "keep_days": 7}))["checkpoints"], 0);
+    assert_eq!(ok(vault, json!({"cmd": "apply_retention"}))["checkpoints"], 0);
+
+    std::fs::write(save.join("e.sav"), b"one").unwrap();
+    let first = ok(vault, json!({"cmd": "capture", "game": "Emerald"}))["checkpoint"].clone();
+    std::fs::write(save.join("e.sav"), b"two").unwrap();
+    ok(vault, json!({"cmd": "capture", "game": "Emerald"}));
+    let first = first.as_str().unwrap();
+    let deleted =
+        ok(vault, json!({"cmd": "delete_checkpoint", "game": "Emerald", "checkpoint": first}));
+    assert_eq!(deleted, json!({"checkpoints": 1, "bytes": 3}));
+    let history = ok(vault, json!({"cmd": "history", "game": "Emerald"}));
+    assert_eq!(history[0]["files_removed"], true);
 }

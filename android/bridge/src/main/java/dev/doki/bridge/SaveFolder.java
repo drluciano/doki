@@ -1,6 +1,9 @@
 package dev.doki.bridge;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeSet;
 
 /**
  * One emulator save folder, as the engine sees it.
@@ -36,6 +39,34 @@ public interface SaveFolder {
      * anything whose name starts with {@code .doki-} (Doki's staging).
      */
     String[] list() throws IOException;
+
+    /**
+     * The files of {@link #list} inside the folder {@code dir} (relative,
+     * no trailing {@code /}), with paths relative to the root. A missing
+     * {@code dir} is empty. Override when the storage can avoid walking the
+     * whole root.
+     */
+    default String[] listUnder(String dir) throws IOException {
+        List<String> out = new ArrayList<>();
+        for (String p : list()) {
+            if (p.startsWith(dir + "/")) out.add(p);
+        }
+        return out.toArray(new String[0]);
+    }
+
+    /**
+     * Names directly inside the root, with a trailing {@code /} on folders.
+     * Excludes {@code .doki-} names. Used to find the games in a
+     * whole-system folder.
+     */
+    default String[] entries() throws IOException {
+        TreeSet<String> out = new TreeSet<>();
+        for (String p : list()) {
+            int slash = p.indexOf('/');
+            out.add(slash < 0 ? p : p.substring(0, slash + 1));
+        }
+        return out.toArray(new String[0]);
+    }
 
     byte[] read(String path) throws IOException;
 

@@ -18,6 +18,8 @@ import org.json.JSONObject;
 import java.io.File;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +50,8 @@ public class WatchService extends Service {
     private ScheduledExecutorService ticker;
     private int ticks;
     private boolean foreground;
+    /** Incoming progress already seen; null until the first sync seeds it. */
+    private Set<String> seenIncoming;
 
     /** Start or stop watching and remember the choice. */
     static void setEnabled(Context context, boolean enabled) {
@@ -84,25 +88,65 @@ public class WatchService extends Service {
     private void tick() {
         try {
             String vault = new File(getFilesDir(), "vault").getAbsolutePath();
-            ContentResolver resolver = getContentResolver();
             if (!new File(vault).isDirectory()) return; // Not set up yet.
-            JSONObject response = new JSONObject(Doki.call(vault, "{\"cmd\":\"auto_check\"}",
-                    location -> SafSaveFolder.open(resolver, location)));
-            JSONArray checks = response.optJSONArray("result");
+            JSONArray checks = call(vault, "{\"cmd\":\"auto_check\"}").optJSONArray("result");
+            JSONObject settings = null;
             for (int i = 0; checks != null && i < checks.length(); i++) {
                 JSONObject check = checks.getJSONObject(i);
-                if ("created".equals(check.optString("outcome"))) {
-                    showNotification("Checkpoint saved for " + check.optString("name") + " at "
-                            + DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date()));
+                String outcome = check.optString("outcome");
+                if (!"created".equals(outcome) && !"detected".equals(outcome)) continue;
+                if (settings == null) settings = settings(vault);
+                String name = check.optString("name");
+                String key = "game:" + check.optString("bundle_id");
+                if ("created".equals(outcome)) {
+                    String time = DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date());
+                    showNotification("Checkpoint saved for " + name + " at " + time);
+                    if (settings.optBoolean("notify_checkpoints", true)) {
+                        Notifier.show(this, key, "Checkpoint saved", name + " is protected up to now.");
+                    }
+                } else if (settings.optBoolean("notify_changes", true)) {
+                    Notifier.show(this, key, "New progress in " + name,
+                            "Doki will save a checkpoint once the game stops writing.");
                 }
             }
             if (ticks++ % SYNC_EVERY_TICKS == 0) {
-                Doki.call(vault, "{\"cmd\":\"peer_sync\"}", location -> SafSaveFolder.open(resolver, location));
+                call(vault, "{\"cmd\":\"peer_sync\"}");
+                notifyNewIncoming(vault);
             }
         } catch (Throwable t) {
             // A failed tick is retried on the next one; problems with a
             // particular game show in the app.
         }
+    }
+
+    private JSONObject call(String vault, String request) throws org.json.JSONException {
+        ContentResolver resolver = getContentResolver();
+        return new JSONObject(Doki.call(vault, request, location -> SafSaveFolder.open(resolver, location)));
+    }
+
+    private JSONObject settings(String vault) throws org.json.JSONException {
+        JSONObject result = call(vault, "{\"cmd\":\"settings\"}").optJSONObject("result");
+        return result != null ? result : new JSONObject();
+    }
+
+    /** Tells the user about progress that arrived since the last sync. */
+    private void notifyNewIncoming(String vault) throws org.json.JSONException {
+        JSONArray incoming = call(vault, "{\"cmd\":\"incoming\"}").optJSONArray("result");
+        if (incoming == null) return;
+        Set<String> now = new HashSet<>();
+        Set<String> seen = seenIncoming;
+        boolean notify = seen != null && settings(vault).optBoolean("notify_incoming", true);
+        for (int i = 0; i < incoming.length(); i++) {
+            JSONObject proposal = incoming.getJSONObject(i).getJSONObject("proposal");
+            String game = proposal.optString("bundle_id");
+            String id = game + "." + proposal.optString("checkpoint");
+            now.add(id);
+            if (notify && !seen.contains(id)) {
+                Notifier.show(this, "incoming:" + game, "Progress from " + proposal.optString("from_device"),
+                        "New progress is waiting in Incoming. Nothing changes until you choose.");
+            }
+        }
+        seenIncoming = now;
     }
 
     private synchronized void showNotification(String text) {

@@ -25,17 +25,24 @@ use doki_platform::local::LocalDir;
 use doki_platform::SaveLocation;
 use doki_vault::{now_rfc3339, random_hex, Vault, VaultLock};
 
+mod cleanup;
 mod install;
 mod manage;
 mod package;
 mod proposals;
 pub mod records;
+mod systems;
 
+pub use cleanup::{Removal, SettingsChanges, KEEP_NEWEST};
 pub use install::{FileState, RecoveryAction, RecoveryOutcome, RecoveryStatus, UseOutcome};
 pub use manage::{AutoCheck, AutoOutcome, BundleChanges};
 pub use package::{ImportSummary, PACKAGE_FORMAT};
 pub use proposals::{Review, ReviewItem};
-pub use records::{BundleRecord, Journal, Proposal, ProposalStatus, UnmappedBundle};
+pub use records::{
+    BundleRecord, ForgottenGame, Journal, MemberKind, MemberRef, Proposal, ProposalStatus,
+    RemoteSystem, Settings, SystemRecord, UnmappedBundle,
+};
+pub use systems::SystemChanges;
 
 use records::{BUNDLES, JOURNALS};
 
@@ -92,6 +99,10 @@ pub struct HistoryEntry {
     /// Progress a choice set aside: kept in history, not continued.
     pub set_aside: bool,
     pub pinned: bool,
+    /// This device removed the checkpoint's files (deleted or past the
+    /// retention time). It stays in history for ancestry only and cannot be
+    /// used or restored here.
+    pub files_removed: bool,
 }
 
 pub struct Engine<P: LocationProvider = LocalProvider> {
@@ -161,6 +172,7 @@ impl<P: LocationProvider> Engine<P> {
             pins: Default::default(),
             created_at: now_rfc3339(),
             auto_capture: true,
+            member: None,
         };
         self.vault.put_record(BUNDLES, record.bundle_id.as_str(), &record)?;
         self.vault.delete_record(records::UNMAPPED, record.bundle_id.as_str())?;
@@ -189,6 +201,16 @@ impl<P: LocationProvider> Engine<P> {
             1 => Ok(matches.into_iter().next().unwrap()),
             0 => Err(Error::NotFound(format!("no game matches {query:?}"))),
             _ => Err(Error::InvalidInput(format!("{query:?} matches several games"))),
+        }
+    }
+
+    /// The save location of a set-up game: its own folder, or its part of a
+    /// whole-system folder.
+    pub(crate) fn open_bundle(&self, record: &BundleRecord) -> Box<dyn SaveLocation + '_> {
+        let folder = self.provider.open(&record.location);
+        match &record.member {
+            Some(m) => Box::new(doki_platform::member::MemberLocation::new(folder, m.member())),
+            None => folder,
         }
     }
 
@@ -271,7 +293,7 @@ impl<P: LocationProvider> Engine<P> {
         note: Option<String>,
     ) -> Result<CaptureOutcome> {
         let mut record = self.bundle(bundle)?;
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(&record);
         location.check_available()?;
         let files = self.copy_stable(location.as_ref())?;
         if files.is_empty() {
@@ -323,7 +345,7 @@ impl<P: LocationProvider> Engine<P> {
     /// `None` when the folder cannot be read.
     pub fn has_uncaptured_changes(&self, bundle: &BundleId) -> Result<bool> {
         let record = self.bundle(bundle)?;
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(&record);
         let files = self.scan(location.as_ref())?;
         Ok(match &record.head {
             Some(head) => self.vault.checkpoint(head)?.files_digest() != FilesDigest::of(&files),
@@ -337,6 +359,7 @@ impl<P: LocationProvider> Engine<P> {
     /// break ties for display; they never decide anything.
     pub fn history(&self, bundle: &BundleId) -> Result<Vec<HistoryEntry>> {
         let record = self.bundle(bundle)?;
+        let pruned = self.pruned_ids()?;
         let mut cps: BTreeMap<CheckpointId, Checkpoint> = self
             .vault
             .checkpoints()?
@@ -378,6 +401,7 @@ impl<P: LocationProvider> Engine<P> {
                 is_tip: !has_children.contains(&next),
                 set_aside: set_aside.contains(&next),
                 pinned: record.pins.contains(&next),
+                files_removed: pruned.contains(&next),
                 id: next,
                 checkpoint: cp,
             });
@@ -433,6 +457,9 @@ impl<P: LocationProvider> Engine<P> {
         if dest.exists() {
             return Err(Error::InvalidInput(format!("{} already exists", dest.display())));
         }
+        if self.is_pruned(cp)? {
+            return Err(files_removed());
+        }
         let checkpoint = self.vault.checkpoint(cp)?;
         self.vault.verify_checkpoint_objects(&checkpoint)?;
         let side = doki_core::error::StorageSide::SaveLocation;
@@ -449,6 +476,11 @@ impl<P: LocationProvider> Engine<P> {
         }
         Ok(())
     }
+}
+
+/// The error for using a checkpoint whose files this device removed.
+pub(crate) fn files_removed() -> Error {
+    Error::NotFound("the files of this checkpoint were removed from this device".into())
 }
 
 fn normalize_location(location: &str) -> String {

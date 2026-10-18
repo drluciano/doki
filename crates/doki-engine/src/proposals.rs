@@ -82,6 +82,9 @@ impl<P: LocationProvider> Engine<P> {
                             // Adopting it changes no files, so no review.
                             record.head = Some(checkpoint.clone());
                             self.save_bundle(&record)?;
+                            // Its files are the head's files, so it has them.
+                            self.vault
+                                .delete_record(crate::records::PRUNED, checkpoint.as_str())?;
                             return Ok(false);
                         }
                         _ => {}
@@ -96,6 +99,7 @@ impl<P: LocationProvider> Engine<P> {
                     name_hint: name_hint.to_owned(),
                     from_device: from_device.to_owned(),
                     has_progress: true,
+                    member: self.unmapped_member(bundle)?,
                 },
             )?,
         }
@@ -156,7 +160,10 @@ impl<P: LocationProvider> Engine<P> {
             .vault
             .get_record::<crate::BundleRecord>(crate::records::BUNDLES, bundle.as_str())?
             .is_some();
-        if set_up || self.vault.get_record::<UnmappedBundle>(UNMAPPED, bundle.as_str())?.is_some() {
+        if set_up
+            || self.is_forgotten(bundle)?
+            || self.vault.get_record::<UnmappedBundle>(UNMAPPED, bundle.as_str())?.is_some()
+        {
             return Ok(false);
         }
         self.vault.put_record(
@@ -167,14 +174,21 @@ impl<P: LocationProvider> Engine<P> {
                 name_hint: name_hint.to_owned(),
                 from_device: from_device.to_owned(),
                 has_progress: false,
+                member: None,
             },
         )?;
         Ok(true)
     }
 
     /// Games seen in received data but not set up here yet.
+    /// Games of a system the user stopped tracking here are left out.
     pub fn unmapped_bundles(&self) -> Result<Vec<UnmappedBundle>> {
-        Ok(self.vault.list_records(UNMAPPED)?.into_iter().map(|(_, u)| u).collect())
+        let ignored = self.ignored_members()?;
+        Ok(self
+            .unmapped_bundles_raw()?
+            .into_iter()
+            .filter(|u| !ignored.contains(&u.bundle_id))
+            .collect())
     }
 
     /// Proposals waiting for review, across set-up games.
@@ -206,10 +220,13 @@ impl<P: LocationProvider> Engine<P> {
         if &incoming_checkpoint.bundle_id != bundle {
             return Err(Error::InvalidInput("that checkpoint belongs to another game".into()));
         }
+        if self.is_pruned(checkpoint)? {
+            return Err(crate::files_removed());
+        }
         self.vault.verify_checkpoint_objects(&incoming_checkpoint)?;
 
         let mut record = self.bundle(bundle)?;
-        let location = self.provider.open(&record.location);
+        let location = self.open_bundle(&record);
         location.check_available()?;
         let live = self.scan(location.as_ref())?;
         let head_digest = match &record.head {

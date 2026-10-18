@@ -5,6 +5,9 @@ import '../main.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../art.dart';
+import '../widgets/cover.dart';
+import 'art_picker.dart';
 import 'edit_game.dart';
 import 'library.dart';
 import 'review.dart';
@@ -132,6 +135,38 @@ class _GameScreenState extends State<GameScreen> {
     await _load();
   }
 
+  Future<void> _delete(HistoryEntry e) async {
+    final state = AppScope.read(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this checkpoint?'),
+        content: Text(
+          'The checkpoint from ${formatWhen(e.checkpoint.capturedAt)} is deleted from this device. '
+          'Your other devices keep their copies, and your save is not changed. '
+          'It cannot be restored here afterwards.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final done = await guarded(
+      context,
+      () => state.backend.call('delete_checkpoint', {
+        'game': widget.gameId,
+        'checkpoint': e.checkpoint.id,
+      }),
+    );
+    if (done != null && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Checkpoint deleted')));
+    }
+    await _load();
+  }
+
   void _openReview(String checkpoint, {String? fromDevice}) {
     Navigator.push(
       context,
@@ -172,6 +207,11 @@ class _GameScreenState extends State<GameScreen> {
                   context,
                   MaterialPageRoute<void>(builder: (_) => EditGameScreen(game: game)),
                 );
+              } else if (choice == 'art') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(builder: (_) => ArtPickerScreen(game: game)),
+                );
               } else if (choice == 'remove' && await confirmRemoveGame(context, game)) {
                 if (context.mounted) Navigator.pop(context);
               }
@@ -180,6 +220,10 @@ class _GameScreenState extends State<GameScreen> {
               PopupMenuItem(
                 value: 'edit',
                 child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Edit game')),
+              ),
+              PopupMenuItem(
+                value: 'art',
+                child: ListTile(leading: Icon(Icons.image_outlined), title: Text('Change art')),
               ),
               PopupMenuItem(
                 value: 'remove',
@@ -201,24 +245,7 @@ class _GameScreenState extends State<GameScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      GameBadge(game.name, size: 56),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(game.name, style: text.titleLarge),
-                            Text(
-                              statusText(game),
-                              style: text.bodyMedium?.copyWith(color: DokiColors.muted),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  GameHeader(game: game, systemName: state.system(game.systemId ?? '')?.name),
                   const SizedBox(height: 16),
                   if (blocked)
                     _RecoveryCard(
@@ -257,7 +284,7 @@ class _GameScreenState extends State<GameScreen> {
                       Card(
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          leading: const Icon(Icons.move_to_inbox, color: DokiColors.lavender),
+                          leading: Icon(Icons.move_to_inbox, color: DokiColors.lavender),
                           title: Text('From ${i.fromDevice}'),
                           subtitle: Text('Saved ${formatWhen(i.checkpoint.capturedAt)}'),
                           trailing: const Icon(Icons.chevron_right),
@@ -282,11 +309,20 @@ class _GameScreenState extends State<GameScreen> {
                       'No checkpoints yet. Create one to protect this save.',
                       style: text.bodyMedium?.copyWith(color: DokiColors.muted),
                     ),
-                  for (final e in _history ?? <HistoryEntry>[])
+                  for (final e in (_history ?? <HistoryEntry>[]).where((e) => !e.filesRemoved))
                     HistoryTile(
                       entry: e,
                       onRestore: blocked || e.isHead ? null : () => _openReview(e.checkpoint.id),
                       onTogglePin: () => _togglePin(e),
+                      onDelete: blocked || e.isHead || e.pinned ? null : () => _delete(e),
+                    ),
+                  if (_history != null && _history!.any((e) => e.filesRemoved))
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+                      child: Text(
+                        removedLine(_history!.where((e) => e.filesRemoved).length),
+                        style: text.bodySmall?.copyWith(color: DokiColors.muted, fontSize: 14),
+                      ),
                     ),
                 ],
               ),
@@ -298,11 +334,106 @@ class _GameScreenState extends State<GameScreen> {
   }
 }
 
+/// Shown under History when this device deleted some checkpoints' files.
+String removedLine(int n) =>
+    '$n older checkpoint${n == 1 ? ' was' : 's were'} deleted from this device. '
+    'Other devices may still have ${n == 1 ? 'it' : 'them'}.';
+
+/// Top of a game's page: its banner with the cover tucked under it when it
+/// has art, then the title, status and the system it belongs to.
+class GameHeader extends StatelessWidget {
+  const GameHeader({super.key, required this.game, this.systemName});
+  final Game game;
+  final String? systemName;
+
+  @override
+  Widget build(BuildContext context) {
+    final art = AppScope.of(context).art;
+    final text = Theme.of(context).textTheme;
+    return ListenableBuilder(
+      listenable: art,
+      builder: (context, _) {
+        final hero = art.image(game.id, ArtKind.hero);
+        final aspect = art.settings.coverAspect;
+        final coverHeight = aspect < 1 ? 120.0 : 64.0;
+        final cover = SizedBox(
+          width: coverHeight * aspect,
+          height: coverHeight,
+          child: Material(
+            elevation: 3,
+            shadowColor: DokiColors.ink.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: GameCover(gameId: game.id, name: game.name),
+          ),
+        );
+        final titles = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(game.name, style: text.titleLarge),
+            Text(statusText(game), style: text.bodyMedium?.copyWith(color: DokiColors.muted)),
+            if (systemName != null)
+              Text(
+                'Part of $systemName',
+                style: text.bodySmall?.copyWith(color: DokiColors.lavender),
+              ),
+          ],
+        );
+        if (hero == null) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              cover,
+              const SizedBox(width: 16),
+              Expanded(child: titles),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: AspectRatio(
+                    aspectRatio: 96 / 31,
+                    child: Image.file(
+                      hero,
+                      fit: BoxFit.cover,
+                      cacheWidth: 1600,
+                      errorBuilder: (_, _, _) => ColoredBox(color: DokiColors.lavenderSoft),
+                    ),
+                  ),
+                ),
+                Positioned(left: 16, bottom: -coverHeight / 2, child: cover),
+              ],
+            ),
+            SizedBox(height: coverHeight / 2 + 12),
+            titles,
+          ],
+        );
+      },
+    );
+  }
+}
+
 class HistoryTile extends StatelessWidget {
-  const HistoryTile({super.key, required this.entry, this.onRestore, this.onTogglePin});
+  const HistoryTile({
+    super.key,
+    required this.entry,
+    this.onRestore,
+    this.onTogglePin,
+    this.onDelete,
+  });
   final HistoryEntry entry;
   final VoidCallback? onRestore;
   final VoidCallback? onTogglePin;
+
+  /// Null for checkpoints that cannot be deleted: the current save and
+  /// pinned ones.
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -365,7 +496,11 @@ class HistoryTile extends StatelessWidget {
             ),
             PopupMenuButton<String>(
               tooltip: 'Checkpoint actions',
-              onSelected: (v) => v == 'restore' ? onRestore?.call() : onTogglePin?.call(),
+              onSelected: (v) => switch (v) {
+                'restore' => onRestore?.call(),
+                'delete' => onDelete?.call(),
+                _ => onTogglePin?.call(),
+              },
               itemBuilder: (_) => [
                 PopupMenuItem(
                   value: 'restore',
@@ -375,6 +510,17 @@ class HistoryTile extends StatelessWidget {
                 PopupMenuItem(
                   value: 'pin',
                   child: Text(entry.pinned ? 'Unpin' : 'Pin (keep forever)'),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  enabled: onDelete != null,
+                  child: Text(
+                    entry.isHead
+                        ? 'Delete (not the current save)'
+                        : entry.pinned
+                        ? 'Delete (unpin first)'
+                        : 'Delete from this device',
+                  ),
                 ),
               ],
             ),

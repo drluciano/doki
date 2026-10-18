@@ -9,6 +9,8 @@ Play on your PC, pick up on your handheld, and come back again. Progress from an
 ## Start here
 
 - [Getting started](Getting-Started.md): install Doki, add a game and create your first checkpoint.
+- [Tracking a whole emulator](Tracking-a-Whole-Emulator.md): add an emulator's save folder once and track every game in it.
+- [Game art](Game-Art.md): covers and banners from SteamGridDB or your own images.
 - [Pairing your devices](Pairing-Devices.md): connect your phone, handheld and PC with a short code.
 - [Reviewing incoming progress](Reviewing-Incoming-Progress.md): what Doki shows you and what each choice does.
 - [History and restoring](History-and-Restoring.md): go back to any earlier checkpoint.

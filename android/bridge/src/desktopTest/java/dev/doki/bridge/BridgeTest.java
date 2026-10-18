@@ -9,7 +9,8 @@ import java.util.regex.Pattern;
 /**
  * End-to-end check of the JNI bridge on a desktop JVM: capture, restore an
  * older checkpoint through review + use (with both replace modes), and
- * error mapping for a missing folder and an unknown replace mode.
+ * error mapping for a missing folder and an unknown replace mode, and a
+ * whole-system folder whose games are found and captured one by one.
  * Run by {@code tools/jni-desktop-test.sh}; exits non-zero on failure.
  */
 public final class BridgeTest {
@@ -95,6 +96,21 @@ public final class BridgeTest {
         ok(v2, "{\"cmd\":\"init\",\"name\":\"Desk\"}");
         String gone = call(v2, "{\"cmd\":\"add\",\"name\":\"Gone\",\"location\":\"/nowhere/missing\"}");
         check(gone.contains("\"code\":\"SourceUnavailable\""), "missing folder not reported: " + gone);
+
+        // A whole-system folder: each subfolder and file group is a game.
+        mode = SaveFolder.REPLACE_DELETE_THEN_RENAME;
+        Path v3 = tmp.resolve("vault-system"), sys = tmp.resolve("system");
+        Files.createDirectories(sys.resolve("Zelda/user"));
+        Files.writeString(sys.resolve("Zelda/user/save.bin"), "z");
+        Files.writeString(sys.resolve("Emerald.sav"), "e");
+        ok(v3, "{\"cmd\":\"init\",\"name\":\"Desk\"}");
+        ok(v3, "{\"cmd\":\"add_system\",\"name\":\"mGBA\",\"location\":" + quote(sys) + "}");
+        String games = ok(v3, "{\"cmd\":\"games\"}");
+        check(games.contains("\"name\":\"Zelda\"") && games.contains("\"name\":\"Emerald\""),
+                "system games not found: " + games);
+        ok(v3, "{\"cmd\":\"capture\",\"game\":\"Zelda\"}");
+        String zelda = ok(v3, "{\"cmd\":\"history\",\"game\":\"Zelda\"}");
+        check(zelda.contains("\"path\":\"user/save.bin\""), "member paths not relative: " + zelda);
 
         String bad = call(v2, "not json");
         check(bad.contains("\"code\":\"InvalidInput\""), "bad request not rejected");

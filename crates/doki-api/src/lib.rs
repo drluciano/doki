@@ -8,7 +8,8 @@
 //! # Requests
 //!
 //! Every request is an object with a `cmd` field. `game` accepts a game id,
-//! id prefix or exact name; `checkpoint` accepts a unique id prefix.
+//! id prefix or exact name; `system` the same for a whole-system folder;
+//! `checkpoint` accepts a unique id prefix.
 //!
 //! | `cmd` | Fields | Result |
 //! |---|---|---|
@@ -20,7 +21,14 @@
 //! | `capture` | `game`, `note?` (caller confirms the game is closed) | `{outcome, checkpoint}` |
 //! | `edit` | `game`, `name?`, `location?`, `auto_capture?` | `BundleRecord`; never touches save files |
 //! | `remove` | `game` | `null`; this device only, history and save folder kept |
-//! | `auto_check` | `settle_secs?` (default 30) | `[{bundle_id, name, outcome, …}]`, see `Engine::auto_check` |
+//! | `auto_check` | `settle_secs?` (default 30) | `[{bundle_id, name, outcome, …}]`, see `Engine::auto_check`; adds new games in systems first |
+//! | `systems` | – | `[SystemRecord]` whole-system folders; their games are in `games` with `game.member.system_id` set |
+//! | `add_system` | `name`, `location`, `link?` | `SystemRecord`; adds the games already in the folder |
+//! | `edit_system` | `system`, `name?`, `location?`, `auto_capture?` | `SystemRecord`; never touches save files |
+//! | `remove_system` | `system` | `null`; this device only, history and save folder kept |
+//! | `scan_systems` | – | `[BundleRecord]` games newly found in system folders |
+//! | `track_again` | `system`, `key` (from `SystemRecord.ignored`) | `[BundleRecord]` |
+//! | `remote_systems` | – | `[RemoteSystem]` systems on other devices not set up here |
 //! | `history` | `game` | `[HistoryEntry]` |
 //! | `incoming` | – | `[ReviewItem]` |
 //! | `review` | `game`, `checkpoint` | `Review` (pass back unchanged to `use`) |
@@ -29,6 +37,14 @@
 //! | `recovery_status` | `game` | `RecoveryStatus` or `null` |
 //! | `recover` | `game`, `action`: `finish` or `put_back` | `RecoveryOutcome` |
 //! | `pin`, `unpin` | `game`, `checkpoint` | `null` |
+//! | `delete_checkpoint` | `game`, `checkpoint` | `{checkpoints, bytes}`; this device only, files only (history keeps its place) |
+//! | `settings` | – | `Settings` (`keep_days`, `notify_checkpoints`, `notify_changes`, `notify_incoming`) |
+//! | `set_settings` | any `Settings` field; `keep_days: null` keeps forever | `Settings`; never removes anything by itself |
+//! | `retention_preview` | `keep_days` | `{checkpoints, bytes}` that keeping `keep_days` days would remove |
+//! | `apply_retention` | – | `{checkpoints, bytes}` removed now under the chosen time |
+//! | `forget` | `game` (bundle id of a removed game) | `{checkpoints, bytes}`; deletes it from this device, other devices keep theirs |
+//! | `forgotten` | – | `[ForgottenGame]` |
+//! | `unforget` | `game` (bundle id) | `null`; it comes back with the next sync |
 //! | `relay_create` | `url` | `{pairing_code}` |
 //! | `relay_join` | `code` | `null` |
 //! | `relay_code` | – | `{pairing_code}` or `null` |
@@ -58,7 +74,9 @@ use std::time::Duration;
 const AUTO_SETTLE_SECS: u64 = 30;
 
 use doki_core::{BundleId, CaptureMode, CheckpointId, Error, Result};
-use doki_engine::{BundleChanges, Engine, LocationProvider, RecoveryAction, Review};
+use doki_engine::{
+    BundleChanges, Engine, LocationProvider, RecoveryAction, Review, SettingsChanges, SystemChanges,
+};
 use doki_peer::{Network, PeerNode};
 use doki_vault::Vault;
 use serde::Deserialize;
@@ -94,6 +112,27 @@ enum Request {
     AutoCheck {
         settle_secs: Option<u64>,
     },
+    Systems,
+    AddSystem {
+        name: String,
+        location: String,
+        link: Option<String>,
+    },
+    EditSystem {
+        system: String,
+        name: Option<String>,
+        location: Option<String>,
+        auto_capture: Option<bool>,
+    },
+    RemoveSystem {
+        system: String,
+    },
+    ScanSystems,
+    TrackAgain {
+        system: String,
+        key: String,
+    },
+    RemoteSystems,
     History {
         game: String,
     },
@@ -131,6 +170,23 @@ enum Request {
     Unpin {
         game: String,
         checkpoint: String,
+    },
+    DeleteCheckpoint {
+        game: String,
+        checkpoint: String,
+    },
+    Settings,
+    SetSettings(SettingsChanges),
+    RetentionPreview {
+        keep_days: u32,
+    },
+    ApplyRetention,
+    Forget {
+        game: String,
+    },
+    Forgotten,
+    Unforget {
+        game: String,
     },
     RelayCreate {
         url: String,
@@ -254,6 +310,26 @@ fn dispatch<P: LocationProvider>(vault_path: &str, provider: P, req: Request) ->
         Request::AutoCheck { settle_secs } => to_value(
             engine.auto_check(Duration::from_secs(settle_secs.unwrap_or(AUTO_SETTLE_SECS)))?,
         ),
+        Request::Systems => to_value(engine.systems()?),
+        Request::AddSystem { name, location, link } => {
+            let link = link.map(|l| BundleId::parse(&l)).transpose()?;
+            to_value(engine.add_system(&name, &location, link)?)
+        }
+        Request::EditSystem { system, name, location, auto_capture } => {
+            to_value(engine.update_system(
+                &engine.find_system(&system)?.system_id,
+                SystemChanges { name, location, auto_capture },
+            )?)
+        }
+        Request::RemoveSystem { system } => {
+            engine.remove_system(&engine.find_system(&system)?.system_id)?;
+            Ok(Value::Null)
+        }
+        Request::ScanSystems => to_value(engine.scan_systems()?),
+        Request::TrackAgain { system, key } => {
+            to_value(engine.track_again(&engine.find_system(&system)?.system_id, &key)?)
+        }
+        Request::RemoteSystems => to_value(engine.remote_systems()?),
         Request::History { game: g } => to_value(engine.history(&game(&g)?)?),
         Request::Incoming => to_value(engine.incoming()?),
         Request::Review { game: g, checkpoint } => {
@@ -291,6 +367,20 @@ fn dispatch<P: LocationProvider>(vault_path: &str, provider: P, req: Request) ->
         Request::Unpin { game: g, checkpoint } => {
             let g = game(&g)?;
             engine.set_pinned(&g, &cp(&g, &checkpoint)?, false)?;
+            Ok(Value::Null)
+        }
+        Request::DeleteCheckpoint { game: g, checkpoint } => {
+            let g = game(&g)?;
+            to_value(engine.delete_checkpoint(&g, &cp(&g, &checkpoint)?)?)
+        }
+        Request::Settings => to_value(engine.settings()?),
+        Request::SetSettings(changes) => to_value(engine.update_settings(changes)?),
+        Request::RetentionPreview { keep_days } => to_value(engine.retention_preview(keep_days)?),
+        Request::ApplyRetention => to_value(engine.apply_retention()?),
+        Request::Forget { game: g } => to_value(engine.forget_game(&BundleId::parse(&g)?)?),
+        Request::Forgotten => to_value(engine.forgotten_games()?),
+        Request::Unforget { game: g } => {
+            engine.unforget_game(&BundleId::parse(&g)?)?;
             Ok(Value::Null)
         }
         Request::RelayCreate { url } => {

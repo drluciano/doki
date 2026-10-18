@@ -32,6 +32,10 @@ class Game {
   String get location => _record['location'] as String;
   String? get head => _record['head'] as String?;
   bool get autoCapture => _record['auto_capture'] as bool? ?? true;
+
+  /// The whole-system folder this game was found in, or null for a game
+  /// whose folder was chosen on its own.
+  String? get systemId => (_record['member'] as Map?)?['system_id'] as String?;
   int get incoming => (json['incoming'] as num).toInt();
   String get rawStatus => json['status'] as String;
 
@@ -54,10 +58,15 @@ class HistoryEntry {
       isHead = json['is_head'] == true,
       isTip = json['is_tip'] == true,
       setAside = json['set_aside'] == true,
-      pinned = json['pinned'] == true;
+      pinned = json['pinned'] == true,
+      filesRemoved = json['files_removed'] == true;
 
   final Checkpoint checkpoint;
   final bool isHead, isTip, setAside, pinned;
+
+  /// This device deleted the checkpoint's files (by hand or past the
+  /// retention time). It stays in the engine's history for ancestry only.
+  final bool filesRemoved;
 }
 
 /// How incoming progress relates to this device's current save.
@@ -98,12 +107,77 @@ class Unmapped {
     : gameId = json['bundle_id'] as String,
       nameHint = json['name_hint'] as String,
       fromDevice = json['from_device'] as String,
-      hasProgress = json['has_progress'] as bool? ?? true;
+      hasProgress = json['has_progress'] as bool? ?? true,
+      systemId = (json['member'] as Map?)?['system_id'] as String?;
   final String gameId, nameHint, fromDevice;
+
+  /// Set when the game is part of a system on the other device; setting up
+  /// that system here sets this game up too.
+  final String? systemId;
 
   /// False when the other device only has the game set up, with no
   /// checkpoint yet.
   final bool hasProgress;
+}
+
+/// Choices for this device (engine `settings`).
+class Settings {
+  const Settings({
+    this.keepDays,
+    this.notifyCheckpoints = true,
+    this.notifyChanges = true,
+    this.notifyIncoming = true,
+  });
+
+  Settings.fromJson(Map<String, dynamic> json)
+    : keepDays = json['keep_days'] as int?,
+      notifyCheckpoints = json['notify_checkpoints'] as bool? ?? true,
+      notifyChanges = json['notify_changes'] as bool? ?? true,
+      notifyIncoming = json['notify_incoming'] as bool? ?? true;
+
+  /// Days checkpoints are kept; null keeps them forever (the default).
+  final int? keepDays;
+  final bool notifyCheckpoints, notifyChanges, notifyIncoming;
+}
+
+/// The retention choices the app offers, in days; null is forever.
+const retentionChoices = <int?>[null, 365, 90, 30, 7];
+
+String retentionLabel(int? days) => switch (days) {
+  null => 'Forever',
+  365 => '1 year',
+  final d => '$d days',
+};
+
+/// A whole-system save folder (`systems`): every game inside it is tracked
+/// as its own game, and new ones are added on their own.
+class SystemEntry {
+  SystemEntry(Map<String, dynamic> json)
+    : id = json['system_id'] as String,
+      name = json['name'] as String,
+      location = json['location'] as String,
+      autoCapture = json['auto_capture'] as bool? ?? true,
+      hidden = [for (final k in json['ignored'] as List? ?? const []) k as String];
+  final String id, name, location;
+  final bool autoCapture;
+
+  /// Games the user stopped tracking, as keys for `track_again`.
+  final List<String> hidden;
+}
+
+/// Name shown for a hidden game's key, e.g. `folder:Zelda` → `Zelda`.
+String hiddenGameName(String key) {
+  final i = key.indexOf(':');
+  return i < 0 ? key : key.substring(i + 1);
+}
+
+/// A system set up on another device and not here (`remote_systems`).
+class RemoteSystem {
+  RemoteSystem(Map<String, dynamic> json)
+    : id = json['system_id'] as String,
+      name = json['name'] as String,
+      fromDevice = json['from_device'] as String;
+  final String id, name, fromDevice;
 }
 
 /// A review result. [json] must be passed back unchanged to `use`.

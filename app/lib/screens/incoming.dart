@@ -70,7 +70,7 @@ class IncomingScreen extends StatelessWidget {
                               subtitle: Text(
                                 'From ${i.fromDevice} · saved ${formatWhen(i.checkpoint.capturedAt)}',
                               ),
-                              trailing: const Icon(Icons.chevron_right, color: DokiColors.muted),
+                              trailing: Icon(Icons.chevron_right, color: DokiColors.muted),
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute<void>(
