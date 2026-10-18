@@ -185,6 +185,7 @@ No platform claim is made beyond this table. Supported emulators are listed only
 ## 10. Transport
 
 - **Handoff package file**: one file the user moves themselves, carrying checkpoints, objects and offers (format in `crates/doki-engine/src/package.rs`). Not encrypted; for trusted channels only.
+- **Device to device** (`crates/doki-peer`, see [peer.md](../peer.md)): devices connect directly over QUIC (iroh), authenticated by per-device Ed25519 keys and encrypted end to end. A device accepts sessions only from devices in its trusted book; pairing needs a code open for 15 minutes, proven over the encrypted connection, and 20 wrong attempts close every open code. Removals spread through the group and are never undone by another device's book; only a newer pairing of that device brings it back. A session sends handoff packages (above) and imports them as in 5.1: vault only, never a save folder. Messages are capped at 16 MiB and packages at 16 GiB.
 - **Relay** (`crates/doki-relay`, client in `crates/doki-sync`): stores the same packages, sealed on the device with XChaCha20-Poly1305 under a key derived from the pairing secret, so the relay never sees save bytes or names. It never decides which save wins, never deletes on a device's behalf, and expires packages after its retention period; expiry is not deletion. Receiving through the relay is the same import as a file (5.1): vault only.
 - Interim limit: paired devices share one secret, so revoking one device means re-pairing the rest (see [relay.md](../relay.md)). S01 replaces this before internet-facing release.
 - Sync is not an independent backup.
@@ -228,8 +229,9 @@ No platform claim is made beyond this table. Supported emulators are listed only
 | App | `app/` | widget tests: review never installs, the review is passed back unchanged, errors state whether the save changed |
 | Java bridge (JNI) | `crates/doki-jni`, `android/bridge` | `tools/jni-desktop-test.sh`: restore through both replace modes, refusal on unknown mode, missing folder |
 | Capture, review, install, recovery, packages | `crates/doki-engine` | `src/tests.rs`: crash at every install step with Finish and Put back, I/O failure at every folder write, crash during recovery, rescue of files written mid-recovery, tampered and truncated packages |
+| Device-to-device sync | `crates/doki-peer` | `src/tests.rs`: trust spreads through pairing, both-played divergence, only missing checkpoints are sent, removal shuts a device out everywhere, a removed device paired again, bad, expired and wrong short codes refused, identity survives restart |
 | Relay server | `crates/doki-relay` | auth, listing, expiry, size limits |
 | Relay client, pairing, encryption | `crates/doki-sync` | wrong key, tampering, relay stores only ciphertext, two-device handoff |
 | Command line | `crates/doki-cli` | `tests/handoff.rs`: the end-to-end milestone, by file and by relay |
 
-Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter on real hardware, per-device relay keys, and checkpoint cleanup (C06).
+Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter on real hardware, peer sync between real Android and Windows devices, per-device relay keys, and checkpoint cleanup (C06).

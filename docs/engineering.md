@@ -12,7 +12,8 @@ Status: the local safety engine is implemented in `crates/` (Rust workspace) and
 - `crates/doki-cli` (built): the `doki` command, used for testing and power users until the app exists.
 - `packages/emulator_profiles` (planned): versioned declarative discovery, bundle membership and compatibility rules. No arbitrary downloaded executable plugins in the initial release. Until then every bundle uses the `generic-folder` profile (all files in the chosen folder).
 - `packages/inspectors` (planned): optional format validators and human-readable save metadata; no generic binary merge promise.
-- `crates/doki-relay` (built): small self-hostable store-and-forward server for encrypted handoff packages. `crates/doki-sync` (built) is the client: pairing codes, end-to-end encryption, sync. Per-device keys and revocation (S01) are required before internet-facing release.
+- `crates/doki-peer` (built): device-to-device sync with no host. Per-device keys, a trusted device book shared between devices, pairing codes (long, or short on the same network), direct encrypted sessions through iroh. This is the default transport.
+- `crates/doki-relay` (built, optional): small self-hostable store-and-forward server for encrypted handoff packages. `crates/doki-sync` (built) is the client: pairing codes, end-to-end encryption, sync. Per-device keys and revocation (S01) are required before internet-facing release.
 - `docs`: architecture decisions, contracts, schemas, threat model, contributor guide, user help and recovery procedures.
 
 Flutter/Rust interoperability is settled as a JSON boundary (`doki-api`): errors convert to the stable codes of the safety contract (section 11) on every platform. Packaging is measured in CI: the desktop build compiles the engine through CMake, and the APK build checks the engine library is present for each ABI.

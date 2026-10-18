@@ -67,6 +67,11 @@ dynamic decodeResponse(String response) {
 
 String encodeRequest(String cmd, Map<String, dynamic> args) => jsonEncode({'cmd': cmd, ...args});
 
+/// Commands that wait on other devices, for up to about 20 seconds. They run
+/// in their own lane so a slow network never holds up the rest of the app;
+/// the engine's vault locks keep the two lanes safe to overlap.
+const networkCommands = {'peer_invite', 'peer_join', 'peer_sync'};
+
 /// Android: the Java side runs the engine on a background thread.
 class ChannelBackend implements DokiBackend {
   static const _channel = MethodChannel('dev.doki/engine');
@@ -75,6 +80,7 @@ class ChannelBackend implements DokiBackend {
   Future<dynamic> call(String cmd, [Map<String, dynamic> args = const {}]) async {
     final response = await _channel.invokeMethod<String>('call', {
       'request': encodeRequest(cmd, args),
+      'lane': networkCommands.contains(cmd) ? 'network' : 'vault',
     });
     return decodeResponse(response!);
   }
@@ -133,15 +139,24 @@ class FfiBackend implements DokiBackend {
   final String vaultPath;
   final String library;
 
-  // Requests run one at a time so the UI never races its own operations.
-  Future<void> _queue = Future.value();
+  // Requests in each lane run one at a time so the UI never races its own
+  // operations; see [networkCommands].
+  Future<void> _vaultQueue = Future.value();
+  Future<void> _networkQueue = Future.value();
 
   @override
   Future<dynamic> call(String cmd, [Map<String, dynamic> args = const {}]) {
     final request = encodeRequest(cmd, args);
     final lib = library, vault = vaultPath;
-    final result = _queue.then((_) => Isolate.run(() => _callBlocking(lib, vault, request)));
-    _queue = result.then((_) {}, onError: (_) {});
+    final network = networkCommands.contains(cmd);
+    final queue = network ? _networkQueue : _vaultQueue;
+    final result = queue.then((_) => Isolate.run(() => _callBlocking(lib, vault, request)));
+    final done = result.then((_) {}, onError: (_) {});
+    if (network) {
+      _networkQueue = done;
+    } else {
+      _vaultQueue = done;
+    }
     return result.then(decodeResponse);
   }
 

@@ -1,0 +1,23 @@
+[package]
+name = "doki-peer"
+description = "Peer-to-peer sync between paired Doki devices, with no server to host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+doki-core.workspace = true
+doki-vault.workspace = true
+doki-engine.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+getrandom.workspace = true
+iroh = "1.3"
+tokio = { version = "1", features = ["rt-multi-thread", "time", "macros", "sync", "net"] }
+base64 = "0.22"
+
+[dev-dependencies]
+tempfile.workspace = true
+doki-platform.workspace = true

@@ -24,7 +24,9 @@ import io.flutter.plugin.common.MethodChannel;
 /**
  * Hosts the Flutter UI and answers its {@code dev.doki/engine} channel:
  * {@code call} runs one engine request (see {@code crates/doki-api}) on a
- * single background thread, so requests never overlap; {@code pickFolder}
+ * background thread, one at a time per lane: requests that wait on other
+ * devices ({@code lane: "network"}) get their own thread so a slow network
+ * never holds up the rest of the app; {@code pickFolder}
  * asks the system folder picker for a save folder and keeps the grant.
  */
 public class MainActivity extends FlutterActivity {
@@ -32,6 +34,7 @@ public class MainActivity extends FlutterActivity {
     private static final int PICK_FOLDER = 4201;
 
     private final ExecutorService engine = Executors.newSingleThreadExecutor();
+    private final ExecutorService network = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
     private MethodChannel.Result pendingPick;
 
@@ -48,7 +51,8 @@ public class MainActivity extends FlutterActivity {
                 String request = call.argument("request");
                 String vault = new File(getFilesDir(), "vault").getAbsolutePath();
                 ContentResolver resolver = getContentResolver();
-                engine.execute(() -> {
+                ExecutorService lane = "network".equals(call.argument("lane")) ? network : engine;
+                lane.execute(() -> {
                     String response =
                             Doki.call(vault, request, location -> SafSaveFolder.open(resolver, location));
                     main.post(() -> result.success(response));

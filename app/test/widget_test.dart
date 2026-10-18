@@ -1,5 +1,6 @@
 import 'package:doki/backend.dart';
 import 'package:doki/main.dart';
+import 'package:doki/screens/devices.dart';
 import 'package:doki/screens/review.dart';
 import 'package:doki/state.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ Map<String, dynamic Function(Map<String, dynamic>)> ready(List<Map<String, dynam
   'games': (_) => games,
   'incoming': (_) => [],
   'unmapped': (_) => [],
+  'peer_list': (_) => [],
   'relay_code': (_) => null,
 };
 
@@ -45,6 +47,7 @@ void main() {
       'games': (_) => [],
       'incoming': (_) => [],
       'unmapped': (_) => [],
+      'peer_list': (_) => [],
       'relay_code': (_) => null,
     });
     await pump(tester, backend);
@@ -149,5 +152,125 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Finish or undo the last change'), findsOneWidget);
     expect(find.textContaining('part old, part new'), findsOneWidget);
+  });
+
+  group('devices', () {
+    setUp(() {
+      final view = TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(800, 2000);
+      view.devicePixelRatio = 1;
+    });
+    tearDown(() => TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!.reset());
+
+    Map<String, dynamic> session(String name, {int sent = 0, int received = 0}) => {
+      'peer': 'id-$name',
+      'peer_name': name,
+      'sent': sent,
+      'received': received == 0
+          ? null
+          : {
+              'from_device': name,
+              'checkpoints_added': received,
+              'new_proposals': [
+                for (var i = 0; i < received; i++) ['b1', 'c$i'],
+              ],
+              'unmapped': [],
+            },
+    };
+
+    testWidgets('pairing with a short code adds the device and says nothing changed', (
+      tester,
+    ) async {
+      var peers = <Map<String, dynamic>>[];
+      final handlers = ready([])
+        ..['peer_list'] = ((_) => peers)
+        ..['peer_join'] = ((args) {
+          expect(args['code'], 'ABCD-2345');
+          peers = [
+            {'id': 'id-odin', 'name': 'Odin', 'introduced_by': null, 'last_sync': null},
+          ];
+          return {'name': 'Odin'};
+        });
+      await pump(tester, FakeBackend(handlers), home: const DevicesScreen());
+      expect(find.textContaining('No other devices yet'), findsOneWidget);
+
+      await tester.enterText(find.widgetWithText(TextField, 'Code'), 'ABCD-2345');
+      await tester.ensureVisible(find.text('Pair'));
+      await tester.tap(find.text('Pair'));
+      await tester.pumpAndSettle();
+      expect(find.text('Paired with Odin'), findsOneWidget);
+      expect(find.textContaining('Nothing on this device was changed'), findsOneWidget);
+      expect(find.text('Odin'), findsOneWidget);
+      expect(find.text('Not synced yet'), findsOneWidget);
+    });
+
+    testWidgets('pairing failures are explained in pairing terms', (tester) async {
+      final handlers = ready([])
+        ..['peer_join'] = ((_) => throw DokiError(
+          'SourceUnavailable',
+          'no device showing a code was found on this network; use the long code instead',
+        ));
+      await pump(tester, FakeBackend(handlers), home: const DevicesScreen());
+      await tester.enterText(find.widgetWithText(TextField, 'Code'), 'ABCD-2345');
+      await tester.ensureVisible(find.text('Pair'));
+      await tester.tap(find.text('Pair'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('No device showing a code was found'), findsOneWidget);
+      expect(find.text('Save location unavailable'), findsNothing);
+    });
+
+    testWidgets('showing a code gives the short and the long code', (tester) async {
+      final handlers = ready([])
+        ..['peer_invite'] = ((_) => {'code': 'DOKIP1:long', 'short': 'WXYZ-6789'});
+      await pump(tester, FakeBackend(handlers), home: const DevicesScreen());
+      await tester.tap(find.text('Show a code on this device'));
+      await tester.pumpAndSettle();
+      expect(find.text('WXYZ-6789'), findsOneWidget);
+      expect(find.text('DOKIP1:long'), findsOneWidget);
+    });
+
+    testWidgets('sync now reports who was reached and what is waiting', (tester) async {
+      final handlers = ready([])
+        ..['peer_list'] = ((_) => [
+          {'id': 'id-odin', 'name': 'Odin', 'introduced_by': null, 'last_sync': null},
+          {'id': 'id-deck', 'name': 'Deck', 'introduced_by': 'Odin', 'last_sync': null},
+        ])
+        ..['peer_sync'] = ((_) => {
+          'sessions': [session('Odin', sent: 1, received: 2)],
+          'unreachable': [
+            ['Deck', 'timed out'],
+          ],
+        });
+      final backend = FakeBackend(handlers);
+      await pump(tester, backend, home: const DevicesScreen());
+      await tester.ensureVisible(find.text('Sync now'));
+      await tester.tap(find.text('Sync now'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Synced with Odin: 1 game sent, 2 new saves waiting in Incoming.'),
+        findsOneWidget,
+      );
+      expect(find.text('Not reachable right now · added through Odin'), findsOneWidget);
+      expect(backend.calls, isNot(contains('use')), reason: 'syncing never installs');
+    });
+
+    testWidgets('the app syncs on its own once devices are paired', (tester) async {
+      final handlers = ready([])
+        ..['peer_list'] = ((_) => [
+          {'id': 'id-odin', 'name': 'Odin', 'introduced_by': null, 'last_sync': null},
+        ])
+        ..['peer_sync'] = ((_) => {
+          'sessions': [session('Odin')],
+          'unreachable': [],
+        });
+      final backend = FakeBackend(handlers);
+      final state = AppState(backend, autoSync: true, syncEvery: const Duration(minutes: 2));
+      await state.refresh();
+      await tester.pump();
+      expect(backend.calls.where((c) => c == 'peer_sync').length, 1);
+      await tester.pump(const Duration(minutes: 2));
+      expect(backend.calls.where((c) => c == 'peer_sync').length, 2);
+      state.dispose();
+    });
   });
 }

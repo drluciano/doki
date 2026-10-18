@@ -16,7 +16,7 @@ doki capture "Emerald" --closed
 doki send "Emerald" -o emerald.dokipkg
 ```
 
-Move `emerald.dokipkg` to the other device any way you like, or pair both devices with a relay and run `doki sync` instead (see [relay.md](relay.md)). There:
+Move `emerald.dokipkg` to the other device any way you like, or pair the devices and sync directly instead (`doki devices`, see [peer.md](peer.md)). There:
 
 ```sh
 doki init --name Odin
@@ -56,6 +56,11 @@ doki use "Emerald" <checkpoint>       # shows the review, asks, then backs up an
 | `pin` / `unpin GAME CP` | Protect a checkpoint from future cleanup | No |
 | `export-files GAME CP FOLDER` | Copy a checkpoint's files out of Doki | No (writes FOLDER) |
 | `clean` | Remove temporary leftovers, never checkpoints | No |
+| `devices invite` | Show pairing codes and answer devices that join | No |
+| `devices join CODE` | Join the group of the device showing CODE (long or short), then sync | No |
+| `devices sync` | Sync directly with every paired device online now | No |
+| `devices serve` | Keep answering your other devices until Ctrl+C | No |
+| `devices list` / `devices remove DEVICE` | Show paired devices / remove one from the whole group | No |
 | `relay create URL` | Start a space on a relay and pair this device | No |
 | `relay join CODE` | Pair this device with the code from another | No |
 | `relay code` / `relay forget` | Show the pairing code / unpair | No |

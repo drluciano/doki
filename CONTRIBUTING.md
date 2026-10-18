@@ -20,6 +20,7 @@ CI runs the same commands on Linux and Windows (`.github/workflows/rust.yml`).
 | `crates/doki-vault` | Local vault: content-addressed objects, checkpoints, records, locks. |
 | `crates/doki-platform` | Save-folder adapters (`SaveLocation`) and fault injection. |
 | `crates/doki-engine` | Capture, review, install with verified backup, recovery, handoff packages. |
+| `crates/doki-peer` | Device-to-device sync: pairing, trusted device book, direct encrypted sessions (iroh). |
 | `crates/doki-relay` | Self-hostable relay server (`doki-relay`). |
 | `crates/doki-sync` | Relay client: pairing, encryption, sync. |
 | `crates/doki-cli` | The `doki` command. |
