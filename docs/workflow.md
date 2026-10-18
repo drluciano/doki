@@ -1,5 +1,9 @@
 # Delivery workflow
 
+## Owner direction, 2026-10-18
+
+The owner asked for a working MVP built without waiting on per-step approval. Work proceeds in incremental draft PRs, each proving a few steps (engine first, then relay, app and Android adapter); the owner reviews and merges. Engine work uses synthetic fixtures and does not wait for F01 device evidence; any claim about a specific device, emulator or provider still requires that evidence. Where the rules below conflict with this direction, this direction wins.
+
 ## Low-overhead operating model
 
 One primary agent handles product management, design, engineering and coordination as needed. The role guides describe responsibilities, not continuously running workers. Do not spawn separate PM, Designer, Engineer or Orchestrator agents by default. Use an independent PR Reviewer once a substantial PR is ready. Extra specialist agents require an explicit owner request or a concrete need explained before delegation.

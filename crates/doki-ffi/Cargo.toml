@@ -1,0 +1,17 @@
+[package]
+name = "doki-ffi"
+description = "C ABI over doki-api for the desktop app (Dart FFI)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+doki-api.workspace = true
+doki-engine.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

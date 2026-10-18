@@ -16,14 +16,14 @@ Doki should feel like a friendly place to keep progress. Cute styling must coexi
 - Spacing: 4-unit base, with 8/12/16/24/32 steps. Content width caps around 1200 logical pixels; paragraphs around 65 characters.
 - Type: licensed bundled font or native system stack, friendly headings and highly legible body. Body default 16 logical pixels, metadata at least 14; accommodate platform scaling without clipped controls.
 - Components: game card, device chip, checkpoint card, status banner, proposal comparison, chronological timeline, operation progress, inline validation, empty state, confirmation sheet, and persistent result panel.
-- Copy: “Checkpoint,” “Save path,” “Use this save,” “Restore checkpoint,” and “Two devices made progress.” Never imply binary saves can be merged unless a compatible inspector actually supports that operation.
+- Copy follows the owner's vocabulary: “Checkpoint” (commit), “Separate progress” (branch), “Incoming progress” (proposal), “Use this save” (checkout) and “Restore a checkpoint” (revert). Divergence reads “You played on both devices. Choose which save to continue. Both versions will stay in your history.” Never imply binary saves can be merged unless a compatible inspector actually supports that operation.
 - Game imagery is optional. Initials and platform symbols provide attractive fallbacks; no onboarding requirement for game-art services.
 
 ## Navigation and responsive behavior
 
-Compact windows use bottom navigation for Library, Reviews, and Devices, with Settings in the top-level menu. Medium and wide windows use a navigation rail; wide game detail supports a history column beside checkpoint details. Breakpoints should follow available content space, not OS identity; test narrow Windows windows and landscape Android handhelds.
+The main screens are Library, Incoming, History and Devices. Compact windows use bottom navigation for Library, Incoming, History and Devices, with Settings in the top-level menu; History opens for the selected game. Medium and wide windows use a navigation rail; wide game detail supports a history column beside checkpoint details. Breakpoints should follow available content space, not OS identity; test narrow Windows windows and landscape Android handhelds.
 
-Library cards show title, emulator/profile, latest protected checkpoint, and textual status. Selecting a card opens game details with current playable save, capture button, incoming proposals, and history. Reviews show actionable proposals only. Devices show last successful exchange and connection status separately. Settings expose retention, vault location, accessibility, diagnostics, and transport settings.
+Library cards show title, emulator/profile, latest protected checkpoint, and textual status. Selecting a card opens game details with current playable save, capture button, incoming progress, and history. Incoming shows only progress waiting for a decision. Devices show last successful exchange and connection status separately. Settings expose retention, vault location, accessibility, diagnostics, and transport settings.
 
 At 320 logical pixels and 200% text scaling, use a single scrolling column. Never shrink safety text or hide the destination behind an overflow menu. In comparison view, stack save cards with explicit device headings; do not rely on left/right positions. Large screens may show them side by side. Preserve reading and focus order.
 

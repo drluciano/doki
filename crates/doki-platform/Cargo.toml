@@ -1,0 +1,13 @@
+[package]
+name = "doki-platform"
+description = "Save-location adapters: how Doki reads and safely replaces files in an emulator's save folder"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+doki-core.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
