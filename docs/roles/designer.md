@@ -1,5 +1,5 @@
-# designer
+# Design responsibility
 
-Use docs/design.md as proposed direction. Produce actual original mockups and interaction flows for UI stories, with all loading, empty, offline, conflict, error and recovery states. Specify responsive behavior, keyboard/controller/screen-reader operation, text scaling and reduced motion. Annotate safety consequences. Do not claim owner visual approval without evidence.
+The primary agent performs this role on demand; no persistent Designer worker or speculative design queue.
 
-Read docs/workflow.md and AGENTS.md. GitHub is the durable source of truth. Role instructions are proposals awaiting bootstrap acceptance.
+Use docs/design.md and owner feedback. Provide original mockups/flows for the selected delivery, including relevant empty/loading/offline/error/recovery states, responsive behavior, accessible input/text/focus, reduced motion and honest save-safety copy. Do not claim owner visual acceptance or implemented accessibility from a static concept. Batch design evidence with meaningful work. Follow docs/workflow.md.

@@ -1,11 +1,7 @@
-# orchestrator
+# Coordination responsibility
 
-Read GitHub state at every run; verify owner-authored acceptance and branch revision. Dispatch PM and Designer on independent work. Enforce exactly one engineering story including awaiting review and accepted-but-unmerged work. Record handoffs, blocked causes and dependencies. Stop at owner review. The owner-authorized one-minute heartbeat checks pending role work; preserve its approval and WIP gates.
+The primary agent coordinates work; this is not a separate always-running agent. Follow docs/workflow.md.
 
-Read docs/workflow.md and AGENTS.md. GitHub is the durable source of truth. Role instructions are proposals awaiting bootstrap acceptance.
+Read only the current story, relevant contracts and changed state. Preserve one engineering story through owner acceptance. Batch related work and maintain a compact handoff. Do not dispatch a roster, create speculative tasks, poll periodically or restart the paused heartbeat. Resume on owner input or real results during an active run.
 
-Dispatch PR Reviewer for ready PR handoffs and after Engineer corrections. Include immutable head/base SHAs and the linked story. Route CHANGES_REQUESTED findings or confirmed merge conflicts to the Engineer on the same story; WAITING remains incomplete. Technical PASS at the current revision triggers authorized PR readiness/merge and then owner story review. Do not start the next story until owner acceptance and merge. A partial research PR can be technically complete for its stated scope and marked ready or merged when authorized; its parent story remains incomplete until the owner accepts all story criteria. An intentionally draft PR is not mergeable until readiness is authorized. Respect the per-run scheduling and identity limits in docs/roles/pr-reviewer.md.
-
-Marking a PR ready, technically reviewing it, merging it, and accepting a story are distinct actions. The shared drluciano identity can mark its PR ready and merge it when repository rules and the owner's authorization allow. GitHub's restriction on approving one's own PR applies to the formal APPROVE review action only; it is not a blanket block on readiness or merge. A separate identity is optional unless an actual required-review rule needs an independent approval.
-
-Standing owner authorization: the PR Reviewer marks a PR ready and merges it when its explicitly stated scope is complete, relevant checks/evidence are satisfactory, GitHub reports clean mergeability, and no blocking discrepancies remain. Immediately before merge, recheck the current head/base, checks and repository requirements, and use the expected-head SHA safeguard. Do not bypass repository rules. This authorization applies to PR readiness and merge, including scoped partial-research PRs; story acceptance and completion remain with the owner, and engineering stays on the current story until that acceptance.
+Dispatch one independent Reviewer when a substantial PR is ready. Route findings back to the primary agent's engineering work. Preserve the standing authorized readiness/merge action and the separate human story gate.
