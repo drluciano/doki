@@ -1,6 +1,6 @@
 # Doki project foundation
 
-This is a reviewable setup package for drluciano/doki, not application code.
+This describes the original project-setup package for drluciano/doki. Application code now lives in `crates/`; see README.md and CONTRIBUTING.md.
 
 Contains role instructions, delivery policy, issue and PR templates, design/engineering proposals, 10 epics and 39 stories, and a complete machine-readable backlog. The existing repository README is preserved during publishing.
 

@@ -20,9 +20,9 @@ def shell(title,subtitle):
     s=rect(0,0,1510,960,BG,0)+text(32,40,'DOKI / DESIGN CONCEPT 01',15,ACC,700)+text(32,76,title,28,INK,700)+text(32,104,subtitle,15,MUTED)
     s+=rect(28,132,990,746,'#EEE9E3',24)+rect(38,142,970,726,BG,18)
     s+=rect(1052,132,430,746,'#302A3B',30)+rect(1064,144,406,722,BG,23)
-    s+=text(60,183,'◉ doki',23,ACC,700)+text(60,229,'Library',16,ACC,700)+text(60,268,'Reviews  1',16)+text(60,307,'Devices',16)+text(60,813,'Settings',15,MUTED)
+    s+=text(60,183,'◉ doki',23,ACC,700)+text(60,229,'Library',16,ACC,700)+text(60,268,'Incoming  1',16)+text(60,307,'Devices',16)+text(60,813,'Settings',15,MUTED)
     s+=text(1084,182,'doki',22,ACC,700)+text(1350,181,'Practice',13,MUTED)
-    s+=rect(1076,798,382,54,'#EEE8F4',15)+text(1090,831,'Library',15,ACC,600)+text(1210,831,'Reviews · 1',15,ACC,600)+text(1352,831,'Devices',15,ACC,600)
+    s+=rect(1076,798,382,54,'#EEE8F4',15)+text(1090,831,'Library',15,ACC,600)+text(1210,831,'Incoming · 1',15,ACC,600)+text(1352,831,'Devices',15,ACC,600)
     s+=text(32,909,'PROPOSED • sample data • static mockup • no production functionality',16,ACC,700)
     s+=text(32,936,'Desktop concept + compact 406dp concept. Real device support and owner acceptance remain pending.',14,MUTED)
     return s
@@ -40,11 +40,11 @@ s+=rect(1082,278,370,88,'#EEE8F4')+text(1098,307,'✦ New save from your PC',17,
 s+=art(1082,387,370,146)+text(1094,562,'Moonlit Meadow',22,INK,700)+badge(1094,580,'✓ Protected locally')+text(1094,638,'Checkpoint · Oct 17, 8:14 PM',15,MUTED)+button(1094,662,340,'Create checkpoint')
 save('01-library.svg',s)
 
-s=shell('Two devices made progress.','Incoming save review / preserve both continuations, make one deliberate choice')
+s=shell('You played on both devices.','Incoming save review / preserve both continuations, make one deliberate choice')
 s+=text(244,191,'Moonlit Meadow',28,INK,700)+text(244,221,'Both saves continue from checkpoint “Before the hill”.',16,MUTED)
 for x,head,time,tag in [(244,'This handheld','Oct 17 · 8:14 PM','Current playable save'),(615,'Your PC','Oct 17 · 8:32 PM','Incoming checkpoint')]:
     s+=rect(x,250,356,265)+badge(x+18,268,tag,'warn' if x==615 else 'mint')+text(x+18,330,head,23,INK,700)+text(x+18,363,time,16,MUTED)+text(x+18,395,'Save bundle · 2 files · 128 KB',15,MUTED)+text(x+18,429,'Copy verified',15,'#285343',600)+text(x+18,468,'Progress details unavailable',14,MUTED)
-s+=rect(244,535,727,116,'#EEE8F4')+text(264,565,'What happens next?',18,INK,700)+text(264,593,'Doki backs up this handheld’s save before replacement.',16)+text(264,621,'Both save paths remain in your history.',16)
+s+=rect(244,535,727,116,'#EEE8F4')+text(264,565,'What happens next?',18,INK,700)+text(264,593,'Doki backs up this handheld’s save before replacement.',16)+text(264,621,'Both versions will stay in your history.',16)
 s+=button(244,681,320,'Back up and use PC save')+button(580,681,215,'Keep handheld save',False)+text(244,762,'No automatic merge: these binary saves need a chosen continuation.',14,MUTED)
 s+=text(1084,229,'Choose a continuation',23,INK,700)+text(1084,257,'Moonlit Meadow · sample saves',14,MUTED)
 for y,head,stamp,current in [(280,'This handheld','Oct 17 · 8:14 PM',True),(440,'Your PC','Oct 17 · 8:32 PM',False)]:

@@ -1,6 +1,8 @@
 # Doki agent instructions
 
-Read docs/workflow.md and the selected issue. Consult docs/engineering.md and role guides only as relevant.
+Read docs/workflow.md and the selected issue. Consult docs/engineering.md, docs/spec/safety-contract.md and role guides only as relevant.
+
+- Owner direction of 2026-10-18 in docs/workflow.md takes precedence over the rules below: build the MVP in incremental draft PRs without waiting on per-step approval; the owner merges.
 
 - Default to one primary agent performing PM, design, engineering and coordination. Role names are responsibilities, not persistent workers. Use one independent PR Reviewer for a substantial ready PR; no other delegation unless explicitly requested or concretely justified.
 - The one-minute heartbeat is paused. Do not restart schedules, poll GitHub periodically or wake idle roles. Resume on owner input or actual results available in an active run.

@@ -1,0 +1,64 @@
+# The `doki` command
+
+The command line drives the same engine the app will use, with the same words: Checkpoint, Separate progress, Incoming progress, Use this save, Restore a checkpoint.
+
+The vault lives in `--vault <folder>`, else `$DOKI_VAULT`, else `%APPDATA%\Doki` on Windows or `~/.local/share/doki` elsewhere. Keep it outside every save folder; Doki refuses overlapping folders.
+
+## Everyday handoff
+
+On the PC:
+
+```sh
+doki init --name PC
+doki add "Emerald" "D:\Emulators\mGBA\saves"
+# play, close the game
+doki capture "Emerald" --closed
+doki send "Emerald" -o emerald.dokipkg
+```
+
+Move `emerald.dokipkg` to the other device any way you like. There:
+
+```sh
+doki init --name Odin
+doki receive emerald.dokipkg          # changes no saves
+doki add "Emerald" <save folder> --link <id printed by receive>   # first time only
+doki incoming
+doki use "Emerald" <checkpoint>       # shows the review, asks, then backs up and installs
+```
+
+`use` re-reads your save right before replacing it. If it changed since the review, Doki captures the change and asks you to review again.
+
+## When both devices played
+
+`doki incoming` says "You played on both devices." `doki use` shows the checkpoint both continued from. Using one keeps the other as separate progress in `doki history`, from where `doki restore` brings it back. `doki dismiss` keeps your save instead and records that choice, so neither device asks again. `doki keep` leaves the incoming progress in history without deciding.
+
+## If an install is interrupted
+
+`doki games` shows "Needs recovery". `doki recover <game>` lists each file as new save, previous save, or changed by something else. Then run `doki recover <game> --finish` or `--put-back`. Files changed by something else are captured into history first. Until recovery finishes, Doki refuses to capture or install for that game; do not play it.
+
+## Commands
+
+| Command | Does | Changes save files? |
+|---|---|---|
+| `init --name N` | Create this device's vault | No |
+| `add NAME FOLDER [--link ID]` | Set up a game's save folder | No |
+| `games` | Games, their state and what waits for you | No |
+| `capture GAME [--closed] [--note T]` | New checkpoint of the current save | No |
+| `history GAME` | Checkpoints, oldest first by ancestry | No |
+| `send GAME… -o FILE` | Handoff file with your current saves and history | No |
+| `receive FILE` | Verify and store a handoff file | No |
+| `incoming` | Incoming progress waiting for review | No |
+| `use GAME CP [--yes]` | Review, back up, install, verify | **Yes**, after backup |
+| `restore GAME CP [--yes]` | Same as use, for a checkpoint from history | **Yes**, after backup |
+| `keep GAME CP` | Keep incoming progress alongside | No |
+| `dismiss GAME CP` | Keep your save; record the choice | No |
+| `recover GAME [--finish \| --put-back]` | Resolve an interrupted install | **Yes** |
+| `pin` / `unpin GAME CP` | Protect a checkpoint from future cleanup | No |
+| `export-files GAME CP FOLDER` | Copy a checkpoint's files out of Doki | No (writes FOLDER) |
+| `clean` | Remove temporary leftovers, never checkpoints | No |
+
+Checkpoint arguments accept any unique prefix of the id shown.
+
+Exit codes: `0` success, `1` error with your save unchanged, `3` error where the save may be mixed and `doki recover` is needed.
+
+Handoff files are not encrypted yet. Move them over channels you trust.
