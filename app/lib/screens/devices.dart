@@ -185,7 +185,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
               const SizedBox(height: 8),
               SelectableText(
                 invitation.short,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 32,
                   fontWeight: FontWeight.w700,
@@ -298,7 +298,7 @@ class _YourDevices extends StatelessWidget {
             for (final p in state.peers)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.devices_other, color: DokiColors.lavender),
+                leading: Icon(Icons.devices_other, color: DokiColors.lavender),
                 title: Text(p.name),
                 subtitle: Text(peerSubtitle(p, report)),
                 trailing: IconButton(

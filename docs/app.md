@@ -22,7 +22,14 @@ The app (`app/`, Flutter) is the main way to use Doki on Android and Windows. It
 6. **History** (open a game): every checkpoint, which one is the current save, and progress set aside by a choice. **Restore this checkpoint** goes through the same backup and verification as Use.
 7. If an install is interrupted (power loss, storage removed), the game shows **A change to this save was interrupted** until you choose **Finish the change** or **Put my save back**. Doki never decides for you.
 
-The app opens on a short doki splash that fades into the library once the vault has loaded. The **Help** tab has the same how-tos in short form (adding a game, checkpoints, pairing, sync, Incoming, using and restoring saves, recovery, keyboard and controller); its text lives in `app/lib/screens/help.dart`, so update it when the wording of a button it names changes.
+The app opens on a doki splash. It waits until the vault has loaded, then the letters arrive, the wordmark holds for a moment and the screen fades into the library (about two seconds; shorter and without movement when the system asks for reduced motion). On Android the system launch screen before it uses the same page color, light or dark to match the device.
+
+**Settings** (the last tab):
+
+- **Theme**: Follow system (the default), Light, Dark or OLED (dark with true black behind everything, for OLED screens). The change applies at once.
+- **Border color**: the color of the soft border that shows where you are with a mouse, keyboard or controller. Each color has a light and a dark shade so it stays visible on every theme. High contrast mode always uses the text color.
+- Both choices are stored in `appearance.json` in the app's support folder, next to the vault. Deleting that file returns to the defaults; nothing in it touches saves.
+- **Help and how-tos**: short how-tos (adding a game, checkpoints, pairing, sync, Incoming, using and restoring saves, recovery, keyboard and controller). Their text lives in `app/lib/screens/help.dart`, so update it when the wording of a button it names changes.
 
 Every error says what happened, whether your playable save changed, and what to do next, with technical details under **Details**.
 

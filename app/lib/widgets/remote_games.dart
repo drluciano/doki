@@ -34,7 +34,7 @@ class RemoteGamesSection extends StatelessWidget {
               leading: GameBadge(u.nameHint, size: 40),
               title: Text(u.nameHint),
               subtitle: Text(remoteGameLine(u, thisDevice: state.deviceName)),
-              trailing: const Icon(Icons.add_circle_outline, color: DokiColors.lavender),
+              trailing: Icon(Icons.add_circle_outline, color: DokiColors.lavender),
               onTap: () => onPicked != null
                   ? onPicked!(u)
                   : Navigator.push(

@@ -223,7 +223,7 @@ class _SaveCard extends StatelessWidget {
     final c = checkpoint;
     final text = Theme.of(context).textTheme;
     return Card(
-      color: highlight ? DokiColors.lavenderSoft : Colors.white,
+      color: highlight ? DokiColors.lavenderSoft : DokiColors.surface,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -83,7 +83,7 @@ class _EditGameScreenState extends State<EditGameScreen> {
               Card(
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: const Icon(Icons.folder_outlined, color: DokiColors.lavender),
+                  leading: Icon(Icons.folder_outlined, color: DokiColors.lavender),
                   title: Text(_folder?.displayName ?? 'Current folder'),
                   subtitle: Text(
                     _folder?.location ?? widget.game.location,

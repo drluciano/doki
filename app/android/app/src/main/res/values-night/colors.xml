@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The dark palette's page color (DokiPalette.dark.cream), for devices set to dark. -->
+    <color name="doki_cream">#17151C</color>
+</resources>

@@ -26,8 +26,12 @@ import '../theme.dart';
 ///
 /// The border never takes input or semantics; screen readers are unaffected.
 class FocusHalo extends StatefulWidget {
-  const FocusHalo({super.key, required this.child});
+  const FocusHalo({super.key, this.color, required this.child});
   final Widget child;
+
+  /// The border's color; Doki lavender when null. High contrast
+  /// always uses the ink color.
+  final Color? color;
 
   /// Lets the border let go of controls on a screen that is being covered or
   /// removed. Add it to the app's `navigatorObservers`.
@@ -130,6 +134,7 @@ class _HaloFrame extends ChangeNotifier {
 class FocusHaloState extends State<FocusHalo>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const _gap = 4.0; // how far the border sits outside the control
+  static const _edgeInset = 3.0; // room kept for the line at a window edge
   static const _popFrom = 10.0; // extra size the border shrinks in from
   static const _squeeze = 2.0; // how far a press pulls the border in
 
@@ -436,7 +441,21 @@ class FocusHaloState extends State<FocusHalo>
     final own = _cornerRadius(box);
     final shortest = rect.shortestSide;
     final radius = (own != null ? own * scale : (shortest <= 56 ? shortest / 2 : 20.0)) + _gap;
-    return _Placement(rect.inflate(_gap), clip, radius);
+    // Keep the whole line visible for a control that sits against the edge
+    // of the window or of its list (the navigation rail): pull in each side
+    // that would fall outside, rather than letting the clip cut it off. A
+    // control already partly scrolled out keeps that side and is clipped.
+    final outer = clip.intersect(Offset.zero & me.size);
+    final inner = outer.deflate(_edgeInset);
+    final halo = rect.inflate(_gap);
+    final fitted = Rect.fromLTRB(
+      rect.left >= outer.left ? math.max(halo.left, inner.left) : halo.left,
+      rect.top >= outer.top ? math.max(halo.top, inner.top) : halo.top,
+      rect.right <= outer.right ? math.min(halo.right, inner.right) : halo.right,
+      rect.bottom <= outer.bottom ? math.min(halo.bottom, inner.bottom) : halo.bottom,
+    );
+    if (fitted.isEmpty) return null;
+    return _Placement(fitted, clip, math.min(radius, fitted.shortestSide / 2));
   }
 
   _Placement? _choose() {
@@ -543,7 +562,7 @@ class FocusHaloState extends State<FocusHalo>
                     child: CustomPaint(
                       painter: _HaloPainter(
                         _frame,
-                        color: highContrast ? DokiColors.ink : DokiColors.lavender,
+                        color: highContrast ? DokiColors.ink : widget.color ?? DokiColors.lavender,
                         width: highContrast ? 3.5 : 2.5,
                       ),
                     ),

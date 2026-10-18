@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../motion.dart';
 import '../theme.dart';
-import '../widgets/common.dart';
 
 /// One how-to: a question-shaped title and short steps or explanations.
 class HelpTopic {
@@ -111,35 +110,7 @@ const helpTopics = [
   ),
 ];
 
-/// Simple how-tos and how Doki works. Each topic opens in place.
-class HelpScreen extends StatelessWidget {
-  const HelpScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Help'), backgroundColor: Colors.transparent),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-        children: [
-          ContentWidth(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < helpTopics.length; i++)
-                  Entrance(
-                    delay: Duration(milliseconds: 30 * i),
-                    child: HelpTopicCard(topic: helpTopics[i], initiallyOpen: i == 0),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+/// One how-to that opens in place; the Settings tab lists [helpTopics] with it.
 class HelpTopicCard extends StatefulWidget {
   const HelpTopicCard({super.key, required this.topic, this.initiallyOpen = false});
   final HelpTopic topic;
@@ -197,7 +168,7 @@ class _HelpTopicCardState extends State<HelpTopicCard> {
                       turns: _open ? 0.5 : 0,
                       duration: reduced ? Duration.zero : DokiMotion.panel,
                       curve: DokiMotion.enter,
-                      child: const Icon(Icons.expand_more, color: DokiColors.muted),
+                      child: Icon(Icons.expand_more, color: DokiColors.muted),
                     ),
                   ],
                 ),
@@ -220,7 +191,7 @@ class _HelpTopicCardState extends State<HelpTopicCard> {
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Padding(
+                                        Padding(
                                           padding: EdgeInsets.only(top: 7, right: 10),
                                           child: Icon(
                                             Icons.circle,

@@ -103,7 +103,7 @@ class StatusBanner extends StatelessWidget {
                   ),
                   if (detail != null) ...[
                     const SizedBox(height: 4),
-                    Text(detail!, style: const TextStyle(color: DokiColors.ink, fontSize: 15)),
+                    Text(detail!, style: TextStyle(color: DokiColors.ink, fontSize: 15)),
                   ],
                 ],
               ),
@@ -127,7 +127,7 @@ class GameBadge extends StatelessWidget {
     final initials = words.isEmpty
         ? '?'
         : words.take(2).map((w) => w.characters.first.toUpperCase()).join();
-    const palette = [DokiColors.lavenderSoft, DokiColors.mint, DokiColors.attention];
+    final palette = [DokiColors.lavenderSoft, DokiColors.mint, DokiColors.attention];
     final bg = palette[name.hashCode.abs() % palette.length];
     return ExcludeSemantics(
       child: Container(

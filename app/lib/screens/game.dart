@@ -257,7 +257,7 @@ class _GameScreenState extends State<GameScreen> {
                       Card(
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          leading: const Icon(Icons.move_to_inbox, color: DokiColors.lavender),
+                          leading: Icon(Icons.move_to_inbox, color: DokiColors.lavender),
                           title: Text('From ${i.fromDevice}'),
                           subtitle: Text('Saved ${formatWhen(i.checkpoint.capturedAt)}'),
                           trailing: const Icon(Icons.chevron_right),
