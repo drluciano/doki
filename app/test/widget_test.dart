@@ -387,12 +387,17 @@ void main() {
             {'bundle_id': 'b1', 'name': 'Emerald', 'outcome': 'created', 'checkpoint': 'c9'},
           ];
         });
-      final backend = FakeBackend(handlers)..watching = true;
+      final backend = FakeBackend(handlers)
+        ..watching = true
+        ..startsWithSystem = false;
       final state = AppState(backend, autoCapture: true, checkEvery: const Duration(seconds: 15));
       await state.refresh();
       expect(state.backgroundWatching, isNull, reason: 'read asynchronously');
       await tester.pump();
       expect(state.backgroundWatching, isTrue);
+      expect(state.startWithSystem, isFalse);
+      await state.setStartWithSystem(true);
+      expect(backend.startsWithSystem, isTrue);
       final before = backend.calls.where((c) => c == 'games').length;
       await tester.pump(const Duration(seconds: 15));
       expect(created, isTrue);

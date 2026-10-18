@@ -45,9 +45,12 @@ class AppState extends ChangeNotifier {
   bool syncing = false;
   Object? loadError;
 
-  /// Whether the background watcher runs when the app is closed; null where
-  /// the platform has none (desktop watches while the app is open).
+  /// Whether Doki keeps working when its window is closed (Android's
+  /// background service, Windows' tray); null where the platform has neither.
   bool? backgroundWatching;
+
+  /// Whether Doki starts when the user signs in; null where not managed.
+  bool? startWithSystem;
 
   Timer? _timer;
   Timer? _checkTimer;
@@ -188,11 +191,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setStartWithSystem(bool on) async {
+    await backend.setStartWithSystem(on);
+    startWithSystem = on;
+    notifyListeners();
+  }
+
   void _startAutoCapture() {
     if (!autoCapture || !initialized || _checkTimer != null) return;
     _checkTimer = Timer.periodic(checkEvery, (_) => autoCheck());
     unawaited(() async {
       backgroundWatching = await backend.backgroundWatching();
+      startWithSystem = await backend.startWithSystem();
       notifyListeners();
     }());
   }

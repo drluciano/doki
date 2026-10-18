@@ -118,9 +118,27 @@ class _DevicesScreenState extends State<DevicesScreen> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       value: state.backgroundWatching!,
                       onChanged: (on) => guarded(context, () => state.setBackgroundWatching(on)),
-                      title: const Text('Keep working in the background'),
+                      title: Text(
+                        Platform.isWindows
+                            ? 'Keep Doki in the tray'
+                            : 'Keep working in the background',
+                      ),
+                      subtitle: Text(
+                        Platform.isWindows
+                            ? 'Closing or minimizing Doki hides it in the tray, where it keeps saving checkpoints and syncing. Turn off to quit when you close it.'
+                            : 'Saves checkpoints and syncs while you play, with a notification showing. Turn off to only work while Doki is open.',
+                      ),
+                    ),
+                  ),
+                if (state.startWithSystem != null)
+                  Card(
+                    child: SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      value: state.startWithSystem!,
+                      onChanged: (on) => guarded(context, () => state.setStartWithSystem(on)),
+                      title: const Text('Start Doki with Windows'),
                       subtitle: const Text(
-                        'Saves checkpoints and syncs while you play, with a notification showing. Turn off to only work while Doki is open.',
+                        'Opens in the tray when you sign in, so checkpoints and sync never wait for you to open it.',
                       ),
                     ),
                   ),

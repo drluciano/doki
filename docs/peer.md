@@ -20,7 +20,7 @@ Pairing makes the new device known to the whole group. Each device has its own k
 
 ## Syncing
 
-The app syncs when it opens, every two minutes while it is open (on Android also from the background watcher), when it returns to the foreground, and when you press **Sync now**. The command line syncs on `doki devices sync`; `doki devices serve` keeps answering other devices until stopped.
+The app syncs when it opens, every two minutes while it is open (on Android also from the background watcher, on Windows also from the tray), when it returns to the foreground, and when you press **Sync now**. The command line syncs on `doki devices sync`; `doki devices serve` keeps answering other devices until stopped.
 
 Each sync with a device:
 
@@ -40,7 +40,7 @@ Devices reach each other directly on the same network. Across networks, iroh tri
 
 - Both devices must be online, with Doki open, at the same time. Use the relay if that rarely happens.
 - The short code needs both devices on the same network, and a network that allows local broadcasts. Some guest and public Wi-Fi networks block them; use the long code there.
-- On Android, background syncing needs the background watcher (on by default, with a notification). With it off, Doki syncs only while the app is open. On Windows and Linux Doki syncs while it is open.
+- On Android, background syncing needs the background watcher (on by default, with a notification). With it off, Doki syncs only while the app is open. On Windows Doki keeps syncing from the tray after its window is closed, until you choose **Quit**; turn on **Start Doki with Windows** to have it running after every sign-in. On Linux Doki syncs while it is open.
 - Syncing on a network with no internet connection at all has not been tested. Devices remember each other's local addresses, but finding a device whose address changed needs the internet until local discovery (mDNS) is built.
 - QR codes are not shown because no supported device scans them yet.
 - Sync is not a backup. A device that is lost before it syncs loses what it had not sent.
