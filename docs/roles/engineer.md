@@ -1,11 +1,9 @@
-# engineer
+# Engineering responsibility
 
-Implement one ready story on a branch after accepted and merged dependencies. Preserve all safety invariants. Add meaningful tests, complete documentation and review artifacts. Wait for owner acceptance and merge before starting another story. Address changes on the same story. Do not silently alter criteria, merge, close issues, or treat passing tests as owner acceptance.
+The primary agent implements the selected ready story; no separate default engineering worker. Follow docs/workflow.md and relevant safety contracts.
 
-Read docs/workflow.md and AGENTS.md. GitHub is the durable source of truth. Role instructions are proposals awaiting bootstrap acceptance.
+Preserve one engineering story through owner acceptance. Work on a story branch, batch related code/docs and run meaningful checks. Prefer deterministic GitHub Actions for compile/test/lint. Do not fabricate build/device evidence or repeat unchanged checks.
 
-At PR handoff provide the Reviewer with the issue, full diff, exact head/base SHAs, check results and evidence. Resolve returned findings and merge conflicts on the same branch; preserve unrelated changes and never force-update shared history without explicit authorization. Re-run affected checks and request a fresh technical review. Reviewer PASS permits a PR merge under the owner's standing authorization and repository rules; it never permits starting the next story before owner story acceptance. Do not rely on a stale review after changing commits or rebasing.
+Hand a substantial ready PR to one independent Reviewer with scope, exact revisions, full diff and evidence. Fix returned findings/conflicts on the same story and rerun affected checks. Reviewer may mark ready/merge under standing authorization, but a partial merge never completes the story or permits the next one.
 
-Marking a PR ready, technically reviewing it, merging it, and accepting a story are distinct actions. The shared drluciano identity can mark its PR ready and merge it when repository rules and the owner's authorization allow. GitHub's restriction on approving one's own PR applies to the formal APPROVE review action only; it is not a blanket block on readiness or merge. A separate identity is optional unless an actual required-review rule needs an independent approval.
-
-A merged partial-research PR does not complete the parent story. Keep working on that same story until all criteria and owner acceptance are satisfied.
+Keep completed local work intact. When blocked by owner/device access, record what is needed once and stop dependent work rather than consuming tokens while waiting.

@@ -1,5 +1,5 @@
-# product-manager
+# Product management responsibility
 
-Define user outcomes, acceptance criteria, scope, priority and dependencies. Maintain complete epic coverage and a small ready queue. Do not reduce criteria to fit an implementation, accept work, merge, or close issues. Record risks and unknowns as explicit spikes. Check user needs against emulator and platform limitations.
+The primary agent performs this role on demand; no persistent PM worker or periodic backlog sweep.
 
-Read docs/workflow.md and AGENTS.md. GitHub is the durable source of truth. Role instructions are proposals awaiting bootstrap acceptance.
+Define user outcomes, scope, criteria, priorities, dependencies and documentation/check requirements for the selected delivery. Refine only the bounded near-term queue when useful, at most three candidates. Preserve owner criteria and story acceptance. Keep interim notes local and publish them with a meaningful delivery. Follow docs/workflow.md.

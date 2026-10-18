@@ -1,15 +1,14 @@
 # Doki agent instructions
 
-Read docs/workflow.md, docs/engineering.md and the selected issue before acting. Role specifications are in docs/roles/. The owner is the only story acceptance authority.
+Read docs/workflow.md and the selected issue. Consult docs/engineering.md and role guides only as relevant.
 
-- Work only within an explicitly selected story. Preserve the one-story engineering limit, including awaiting owner review and accepted-but-unmerged work.
-- PM and Designer may prepare independent upcoming stories concurrently. Do not start implementation until dependencies are accepted and merged and design/criteria are ready.
-- Never mark owner story acceptance, close stories, weaken criteria, or bypass approval controls on the owner's behalf. The owner explicitly authorizes the PR Reviewer to mark ready and merge technically passing PRs with complete stated scope and satisfied repository requirements; this does not complete the story or permit another engineering story.
-- Make application changes on a story branch and open a PR using Refs #N rather than automatic closing keywords.
-- Receiving a save must never install it. Verified pre-apply backup, baseline recheck, immutable history and journaled recovery are required.
-- Document every public API, configuration, schema, error and state transition; comment on reasoning and invariants. Keep guides and examples correct; avoid redundant comments that simply repeat code.
-- Submit each ready PR to the PR Reviewer before authorized merge and owner story review. Reviewer technical approval is separate from owner story acceptance; conflicts return to the Engineer on the same story. Read docs/roles/pr-reviewer.md.
-- Run meaningful checks appropriate to the change; report exact commands, results and limits. UI work requires runnable review evidence and visual/accessibility checks.
-- Treat save data as private; redact diagnostics. Do not commit game saves, ROMs, credentials or keys. Use synthetic fixtures or appropriately licensed test data.
-- Current stack and design are proposals until owner acceptance and feasibility validation. Read architecture decision records before treating any proposal as final.
-- The owner authorized a one-minute pending-work heartbeat. It must preserve all approval and WIP gates. Shared identity permits marking PRs ready and authorized merges; the formal self-approval restriction must not be treated as a readiness/merge prohibition. Record handoffs durably and stop at the owner story-review gate.
+- Default to one primary agent performing PM, design, engineering and coordination. Role names are responsibilities, not persistent workers. Use one independent PR Reviewer for a substantial ready PR; no other delegation unless explicitly requested or concretely justified.
+- The one-minute heartbeat is paused. Do not restart schedules, poll GitHub periodically or wake idle roles. Resume on owner input or actual results available in an active run.
+- Keep one engineering story active through owner acceptance, even after partial PR merges. Only the owner accepts/completes stories. Do not weaken criteria or auto-close issues.
+- Batch design/code/docs/checks into meaningful PRs. Keep intermediate notes local; avoid planning-only micro-PRs and repetitive handoffs.
+- Reviewer may mark ready and merge clean, technically passing PRs under standing owner authorization and repository rules. Technical PASS/merge is not human story acceptance. Shared identity permits readiness/merge; formal self-APPROVE is a different action.
+- Run relevant meaningful checks, preferably deterministic CI. Inspect changed state only; do not repeat unchanged checks/reviews or interpret missing evidence as passing.
+- Document public APIs, configuration, schemas, errors, state transitions and supported user workflows. Explain safety-critical ordering; keep comments useful.
+- Receiving a save never installs it. Preserve verified pre-apply backup, baseline recheck, immutable history and journaled recovery. No generic binary-merge or untested platform-support claims.
+- Keep personal saves, ROMs, credentials and identifying diagnostics out of the repository; use synthetic/licensed fixtures.
+- Preserve current work and compact handoff notes. Report only meaningful progress, failures or required owner actions; no repeated unchanged blocker reports.
