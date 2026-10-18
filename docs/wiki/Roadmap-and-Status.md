@@ -5,10 +5,12 @@ Doki is **pre-release**. This page says what works today, what is verified and h
 ## Built and tested in CI
 
 - The engine: checkpoints, review, install with verified backup, recheck before replacing, recovery after an interruption (with a simulated crash at every step), handoff files.
+- Automatic checkpoints once a save settles, whole-emulator tracking, editing and removing games, deleting checkpoints and **Keep checkpoints for** retention.
 - The `doki` command line.
 - Device-to-device pairing and sync with no host: short and long codes, trusted devices spreading through the group, device removal, both-played detection.
 - The optional self-hosted relay and its encryption.
-- The Flutter app on Windows and Linux, tested against the real engine; Android builds with the engine for arm64 and x86_64.
+- The Flutter app on Windows and Linux, tested against the real engine; Android builds with the engine for arm64 and x86_64, and CI checks the release APK keeps the names the engine calls.
+- In the app: the Android background watcher, the Windows tray and start with Windows, notifications, themes and border colors, game art from SteamGridDB or your own images, and in-app help.
 - The Android bridge, tested on a desktop JVM with both ways of replacing files.
 
 ## Not yet verified
@@ -24,9 +26,8 @@ Until these are verified, treat Android installs as experimental and keep copies
 - A practice tutorial with sample saves, before connecting a real folder.
 - A preview of a folder's files before connecting it.
 - QR codes for pairing.
-- Background sync on Android.
 - Finding devices on a local network with no internet (mDNS).
-- Checkpoint cleanup, with a preview and pins always kept.
+- Updating the Android app in place: test builds need a stable signing key ([#82](https://github.com/drluciano/doki/issues/82)). Until then, see [Updating Doki](Updating-Doki.md).
 - Encrypted handoff files.
 - Per-device keys for the relay.
 - Emulator profiles and a compatibility list.

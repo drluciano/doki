@@ -60,4 +60,5 @@ CI (`.github/workflows/app.yml`) runs the tests on Linux and Windows and publish
 
 - Verified in CI: widget tests against a fake engine; the real engine through FFI (capture, restore, a stale review refused); the Java bridge on a desktop JVM with both replace modes; Android sources compile and the APK carries the engine for arm64 and x86_64.
 - Not yet verified: the Storage Access Framework adapter on real hardware and emulator storage providers (F01). Until then, treat Android installs as experimental and keep copies of saves.
-- Not built yet: the practice-saves tutorial, a file preview before connecting a folder, QR codes, background sync on Android, checkpoint cleanup and per-device relay keys. Peer-to-peer sync is tested between devices on one machine and over a local network, not yet between an Android device and a PC.
+- Not built yet: the practice-saves tutorial, a file preview before connecting a folder, QR codes and per-device relay keys.
+- Known limit: each CI build signs the APK with a new debug key, so a newer APK will not install over an older one and updating means uninstalling, which deletes the vault on that device (#82). Sync with another device first; the wiki page *Updating Doki* has the steps. Peer-to-peer sync is tested between devices on one machine and over a local network, not yet between an Android device and a PC.

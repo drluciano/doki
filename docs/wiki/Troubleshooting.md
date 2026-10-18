@@ -36,6 +36,18 @@ Every Doki error says what happened, **whether your save changed**, and what to 
 
 **Progress arrived for a game I have not set up.** Choose **Set up …** under Incoming and pick that game's save folder on this device.
 
+## Updating
+
+**"App not installed as it conflicts with an existing package" on Android.** Each test build is currently signed with a different key ([#82](https://github.com/drluciano/doki/issues/82)), so Android will not install it over the old one. Uninstalling first works but deletes Doki's checkpoints on that device. Follow [Updating Doki](Updating-Doki.md) to keep them.
+
+## Automatic checkpoints and the background
+
+**Library keeps saying "New progress, checkpoint coming soon".** The save is still changing, for example because the game is still running and saving. Doki waits until it has stayed the same for 30 seconds.
+
+**No checkpoints while I play on Android.** Check **Devices → Keep working in the background** is on, and that the notification is showing. Some devices stop background apps to save battery; allow Doki to run in the background in Android's battery settings.
+
+**No notifications on Windows.** They come from the tray icon, so **Keep Doki in the tray** must be on.
+
 ## Android folders
 
 - Choose the folder that holds the game's save files, not the emulator's whole data folder.

@@ -9,6 +9,11 @@ Doki uses a few plain words for its ideas. The command line and the app use the 
 | **History** | All the checkpoints of a game on this device, including those from other devices and backups. |
 | **Incoming progress** | A checkpoint from another device, waiting for you to review it. It has not changed anything yet. |
 | **System** | An emulator's whole save folder added once. Every game in it (each subfolder, or each set of save files sharing a name) is tracked as its own game. See [Tracking a whole emulator](Tracking-a-Whole-Emulator.md). |
+| **Automatic checkpoint** | A checkpoint Doki makes on its own once a save has stopped changing for 30 seconds. |
+| **Checkpoint now** | Make a checkpoint right away, after closing the game. |
+| **Remove from this device** | Stop tracking a game here. Its save files and checkpoints are kept. |
+| **Delete from this device** | Delete a checkpoint, or a removed game's checkpoints, on this device only. Save folders and other devices are never affected. |
+| **Keep checkpoints for** | How long this device keeps checkpoints: forever (the default) or a set time. |
 | **Use this save** | Replace your current save with incoming progress, after a verified backup. |
 | **Restore a checkpoint** | Replace your current save with a checkpoint from History, after a verified backup. |
 | **Keep alongside** | Put incoming progress in History without using it, and stop asking about it. |
@@ -16,7 +21,7 @@ Doki uses a few plain words for its ideas. The command line and the app use the 
 | **Separate progress** | A version you set aside, or one nobody continued from. Still in History, still restorable. |
 | **You played on both devices** | Both devices continued from the same checkpoint in different directions. You choose which to continue; both are kept. |
 | **Backup before a change** | The checkpoint Doki verified before replacing your save. |
-| **Pin** | Mark a checkpoint to keep forever, whatever future cleanup does. |
+| **Pin** | Mark a checkpoint to keep forever. **Keep checkpoints for** never deletes it, and it cannot be deleted by hand until unpinned. |
 | **Pairing** | Connecting a new device to your devices with a short or long code. |
 | **Short code** | An `ABCD-2345` code for pairing on the same Wi-Fi. |
 | **Long code** | A `DOKIP1:…` code for pairing from any network. |

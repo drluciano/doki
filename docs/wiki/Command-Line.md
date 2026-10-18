@@ -23,7 +23,20 @@ doki add "Emerald" "D:\Emulators\mGBA\saves"
 # play, then close the game
 doki capture "Emerald" --closed --note "Beat Roxanne"
 doki history "Emerald"
+doki watch                  # make a checkpoint whenever a save stops changing (Ctrl+C to stop)
 ```
+
+Manage games and storage:
+
+```sh
+doki edit "Emerald" --name "Pokémon Emerald" --folder "D:\new\saves" --auto off
+doki remove "Emerald"                        # stop tracking here; files and checkpoints kept
+doki delete-checkpoint "Emerald" <checkpoint>
+doki retention 90                            # keep 90 days; previews what goes and asks
+doki forget <id> / doki unforget <id>        # delete a removed game's checkpoints here / list it again
+```
+
+None of these change save files. See [Editing and removing games](Editing-and-Removing-Games.md) and [Freeing up space](Freeing-Up-Space.md).
 
 Pair and sync with your other devices:
 
