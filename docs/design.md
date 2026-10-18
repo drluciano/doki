@@ -36,6 +36,14 @@ At 320 logical pixels and 200% text scaling, use a single scrolling column. Neve
 - Cancel is available before file replacement begins. Once a recoverable installation begins, explain why closing the app does not cancel the operation; show recovery state on reopening.
 - Escape/back closes transient UI first. Never dismiss a nonrecoverable error without leaving a way to find its details.
 
+### Motion as built (app/lib/motion.dart, app/lib/widgets/focus_halo.dart)
+
+- **Focus border.** One rounded lavender border, drawn once above the whole app, marks the control you are about to use. It glides on a slightly springy curve (about 250 ms to settle) between controls as the mouse hovers, as Tab, arrow keys or a controller D-pad move focus, and under a finger on touch screens. Pressing squeezes it 2 px. Its corners follow the control it surrounds (pill buttons get a pill, cards their card corner, text fields their field corner, read from the control's own shape or the theme), and around text fields it hugs the field's border, not its helper text. It tracks any enabled tappable control and any focused control, so new screens get it without extra code. Keyboard focus is shown only while keys drive focus. It stays inside the scrolling list it belongs to and lets go when a screen is covered.
+- **Screens.** Pushed screens fade in while rising slightly (260 ms in, 220 ms back); the screen underneath settles to 97%. Tabs fade through: the old tab fades out, then the new one fades in from 98%. Every tab keeps its state.
+- **Arrivals.** Empty states fade and rise in; status banners blend between kinds.
+- **Reduced motion.** When the OS asks for it, the border jumps instead of gliding or popping, and screens and tabs only fade. High contrast draws the border in ink at 3.5 px.
+- The border has no semantics and takes no input; screen readers and hit testing are unchanged.
+
 ## Accessibility acceptance baseline
 
 Every action supports keyboard and touch, with predictable focus order and visible focus. Target minimum 48×48 logical pixels for touch controls. Controller support uses directional navigation with no focus traps. Screen readers announce control names, checkpoint device, capture time, verification state, and operation completion without repeating every progress tick. State changes do not steal focus unless the current control disappears. Body text aims for 4.5:1 contrast and meaningful graphics/focus indicators 3:1. Validate against the applicable WCAG 2.2 criteria and platform accessibility tooling. Test high contrast, text scaling, reduced motion, keyboard-only use, screen readers, and long translated strings. Dates use local formatting with absolute timestamp available; relative dates must not be the sole identity of a checkpoint.

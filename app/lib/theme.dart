@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'motion.dart';
+
 /// Proposed tokens from docs/design.md: warm cream, white cards, ink text,
 /// lavender accent, mint secondary. Soft corners and restrained shadows.
 class DokiColors {
@@ -29,6 +31,13 @@ ThemeData dokiTheme() {
   final base = ThemeData(colorScheme: scheme, useMaterial3: true);
   return base.copyWith(
     scaffoldBackgroundColor: DokiColors.cream,
+    // Soft lavender tints under the focus border instead of Material's grey.
+    focusColor: DokiColors.lavender.withValues(alpha: 0.08),
+    hoverColor: DokiColors.lavender.withValues(alpha: 0.05),
+    // One transition on every platform, so screens feel the same everywhere.
+    pageTransitionsTheme: PageTransitionsTheme(
+      builders: {for (final p in TargetPlatform.values) p: const DokiPageTransitionsBuilder()},
+    ),
     textTheme: base.textTheme.apply(bodyColor: DokiColors.ink, displayColor: DokiColors.ink),
     cardTheme: CardThemeData(
       color: Colors.white,
