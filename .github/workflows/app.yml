@@ -9,6 +9,7 @@ on:
       - 'Cargo.lock'
       - 'tools/app-test.sh'
       - 'tools/build-android-engine.sh'
+      - 'tools/check-apk-bridge.sh'
       - '.github/workflows/app.yml'
   push:
     branches: [main]
