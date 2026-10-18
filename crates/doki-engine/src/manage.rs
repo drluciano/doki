@@ -24,6 +24,9 @@ pub struct BundleChanges {
 pub enum AutoOutcome {
     /// The folder matches the current checkpoint.
     Unchanged,
+    /// A change was just noticed, after the folder last matched the
+    /// current checkpoint. Reported once per change, for notifications.
+    Detected,
     /// The folder changed and is waiting to stay still for the settle time.
     Waiting,
     /// A checkpoint was taken.
@@ -151,7 +154,8 @@ impl<P: LocationProvider> Engine<P> {
     /// bytes, and capture itself re-reads the folder and refuses if it moved
     /// (section 4), so a capture never lands mid-write. Never writes save
     /// files. Games that cannot be read are skipped and reported, not
-    /// errors.
+    /// errors. After a checkpoint is taken, applies the retention time the
+    /// user chose, if any ([`Engine::apply_retention`]).
     pub fn auto_check(&self, settle: Duration) -> Result<Vec<AutoCheck>> {
         let mut out = Vec::new();
         for record in self.bundles()? {
@@ -165,6 +169,12 @@ impl<P: LocationProvider> Engine<P> {
                 }
             };
             out.push(AutoCheck { bundle_id: record.bundle_id, name: record.name, outcome });
+        }
+        if out.iter().any(|c| matches!(c.outcome, AutoOutcome::Created { .. })) {
+            // A new checkpoint may push an old one past the retention time.
+            // A failure here (another operation running, a game waiting for
+            // recovery) only delays cleanup to a later check.
+            let _ = self.apply_retention();
         }
         Ok(out)
     }
@@ -196,13 +206,17 @@ impl<P: LocationProvider> Engine<P> {
             Some(w)
                 if w.digest == digest && now.saturating_sub(w.since_secs) >= settle.as_secs() => {}
             Some(w) if w.digest == digest => return Ok(AutoOutcome::Waiting),
-            _ => {
+            seen => {
                 self.vault.put_record(
                     WATCH,
                     bundle.as_str(),
                     &Watch { digest, since_secs: now },
                 )?;
-                return Ok(AutoOutcome::Waiting);
+                return Ok(if seen.is_none() {
+                    AutoOutcome::Detected
+                } else {
+                    AutoOutcome::Waiting
+                });
             }
         }
         match self.capture(bundle, CaptureMode::QuiescenceHeuristic, None) {

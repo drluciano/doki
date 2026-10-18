@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 import '../widgets/common.dart';
+import '../widgets/retention.dart';
 import 'game.dart';
 import 'library.dart';
 
@@ -26,6 +27,8 @@ class HistoryScreen extends StatelessWidget {
                 ContentWidth(
                   child: Column(
                     children: [
+                      const RetentionCard(),
+                      const SizedBox(height: 16),
                       for (final g in state.games)
                         Card(
                           child: ListTile(

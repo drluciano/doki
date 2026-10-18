@@ -82,6 +82,9 @@ impl<P: LocationProvider> Engine<P> {
                             // Adopting it changes no files, so no review.
                             record.head = Some(checkpoint.clone());
                             self.save_bundle(&record)?;
+                            // Its files are the head's files, so it has them.
+                            self.vault
+                                .delete_record(crate::records::PRUNED, checkpoint.as_str())?;
                             return Ok(false);
                         }
                         _ => {}
@@ -156,7 +159,10 @@ impl<P: LocationProvider> Engine<P> {
             .vault
             .get_record::<crate::BundleRecord>(crate::records::BUNDLES, bundle.as_str())?
             .is_some();
-        if set_up || self.vault.get_record::<UnmappedBundle>(UNMAPPED, bundle.as_str())?.is_some() {
+        if set_up
+            || self.is_forgotten(bundle)?
+            || self.vault.get_record::<UnmappedBundle>(UNMAPPED, bundle.as_str())?.is_some()
+        {
             return Ok(false);
         }
         self.vault.put_record(
@@ -205,6 +211,9 @@ impl<P: LocationProvider> Engine<P> {
         let incoming_checkpoint = self.vault.checkpoint(checkpoint)?;
         if &incoming_checkpoint.bundle_id != bundle {
             return Err(Error::InvalidInput("that checkpoint belongs to another game".into()));
+        }
+        if self.is_pruned(checkpoint)? {
+            return Err(crate::files_removed());
         }
         self.vault.verify_checkpoint_objects(&incoming_checkpoint)?;
 

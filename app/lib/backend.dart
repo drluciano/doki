@@ -61,6 +61,12 @@ abstract class DokiBackend {
 
   Future<void> setStartWithSystem(bool on);
 
+  /// Show a system notification. [key] identifies what it is about (a game
+  /// id), so a newer notification about the same thing replaces the older
+  /// one. Android posts a notification, Windows shows it from the tray
+  /// icon; elsewhere, or with notifications blocked, nothing is shown.
+  Future<void> notify(String key, String title, String body);
+
   static Future<DokiBackend> forPlatform() async {
     if (Platform.isAndroid) return ChannelBackend();
     final support = await getApplicationSupportDirectory();
@@ -122,6 +128,10 @@ class ChannelBackend implements DokiBackend {
 
   @override
   Future<void> setStartWithSystem(bool on) async {}
+
+  @override
+  Future<void> notify(String key, String title, String body) =>
+      _channel.invokeMethod<void>('notify', {'key': key, 'title': title, 'body': body});
 }
 
 typedef _CallNative = Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>);
@@ -228,4 +238,14 @@ class FfiBackend implements DokiBackend {
 
   @override
   Future<void> setStartWithSystem(bool on) => _setWindowSetting('StartWithWindows', on);
+
+  @override
+  Future<void> notify(String key, String title, String body) async {
+    if (!Platform.isWindows) return;
+    try {
+      await _window.invokeMethod<void>('notify', {'key': key, 'title': title, 'body': body});
+    } on MissingPluginException {
+      // Running without the Windows runner (tests).
+    }
+  }
 }

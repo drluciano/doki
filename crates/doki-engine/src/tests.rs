@@ -855,7 +855,7 @@ fn automatic_checkpoints_wait_for_the_folder_to_settle() {
     assert_eq!(outcome(&d), AutoOutcome::Unchanged);
     // A change is seen, then must stay the same for the settle time.
     d.play(&files(&[("a.sav", b"1")]));
-    assert_eq!(outcome(&d), AutoOutcome::Waiting);
+    assert_eq!(outcome(&d), AutoOutcome::Detected, "reported once, for a notification");
     assert_eq!(outcome(&d), AutoOutcome::Waiting);
     // Still being written: the wait starts over.
     std::thread::sleep(std::time::Duration::from_millis(1100));
@@ -946,4 +946,90 @@ fn removing_a_game_keeps_its_history_and_save_and_can_be_undone() {
         .unwrap();
     let history = d.engine.history(&d.bundle).unwrap();
     assert!(history.iter().any(|e| e.id == head));
+}
+
+// ---- deleting and retention --------------------------------------------
+
+#[test]
+fn deleting_a_checkpoint_removes_only_its_files_and_keeps_ancestry() {
+    let (pc, handheld) = pair(&files(&[("a.sav", b"1")]));
+    let first = pc.head().unwrap();
+    pc.play(&files(&[("a.sav", b"2")]));
+    let second = pc.capture();
+    pc.play(&files(&[("a.sav", b"3")]));
+    let third = pc.capture();
+
+    // The current save, a pinned checkpoint and Incoming progress are kept.
+    assert!(matches!(pc.engine.delete_checkpoint(&pc.bundle, &third), Err(Error::InvalidInput(_))));
+    pc.engine.set_pinned(&pc.bundle, &first, true).unwrap();
+    assert!(matches!(pc.engine.delete_checkpoint(&pc.bundle, &first), Err(Error::InvalidInput(_))));
+
+    let removed = pc.engine.delete_checkpoint(&pc.bundle, &second).unwrap();
+    assert_eq!(removed, Removal { checkpoints: 1, bytes: 1 });
+    let entry = pc.engine.history(&pc.bundle).unwrap().into_iter().find(|e| e.id == second);
+    assert!(entry.unwrap().files_removed, "still in history for ancestry");
+    assert!(matches!(pc.engine.review(&pc.bundle, &second), Err(Error::NotFound(_))));
+    assert_eq!(pc.save(), files(&[("a.sav", b"3")]), "never touches the save folder");
+    assert_eq!(pc.checkpoint_files(&third), files(&[("a.sav", b"3")]));
+
+    // Packages still carry its place in history, without files. The other
+    // device fast-forwards instead of seeing a conflict.
+    let summary = pc.send_to(&handheld);
+    assert_eq!(summary.new_proposals.len(), 1);
+    let review = handheld.engine.review(&handheld.bundle, &third).unwrap();
+    assert!(!review.is_divergent());
+    assert!(handheld.engine.is_pruned(&second).unwrap());
+    assert!(!handheld.engine.is_pruned(&first).unwrap());
+}
+
+#[test]
+fn retention_keeps_recent_pinned_and_current_checkpoints() {
+    let d = device("PC", None);
+    let mut ids = Vec::new();
+    for i in 0..14u8 {
+        d.play(&files(&[("a.sav", &[i])]));
+        ids.push(d.capture());
+    }
+    d.engine.set_pinned(&d.bundle, &ids[0], true).unwrap();
+    let later = std::time::SystemTime::now() + std::time::Duration::from_secs(40 * 86_400);
+
+    // Forever (the default) removes nothing.
+    assert_eq!(d.engine.apply_retention_at(later).unwrap(), Removal::default());
+
+    d.engine
+        .update_settings(SettingsChanges { keep_days: Some(Some(30)), ..Default::default() })
+        .unwrap();
+    assert_eq!(d.engine.retention_preview(30).unwrap().checkpoints, 0, "nothing is old yet");
+    let removed = d.engine.apply_retention_at(later).unwrap();
+    // 14 checkpoints, minus the 10 newest, minus the pinned one.
+    assert_eq!(removed.checkpoints, 3);
+    let history = d.engine.history(&d.bundle).unwrap();
+    let gone: Vec<_> = history.iter().filter(|e| e.files_removed).map(|e| e.id.clone()).collect();
+    assert_eq!(gone, ids[1..4].to_vec());
+    assert_eq!(history.len(), 14, "records stay for ancestry");
+    assert_eq!(d.save(), files(&[("a.sav", &[13])]));
+}
+
+#[test]
+fn a_deleted_game_stays_gone_until_undone() {
+    let (pc, handheld) = pair(&files(&[("a.sav", b"1")]));
+    handheld.engine.remove_bundle(&handheld.bundle).unwrap();
+    pc.send_to(&handheld);
+    assert_eq!(handheld.engine.unmapped_bundles().unwrap().len(), 1);
+    assert!(matches!(handheld.engine.forget_game(&pc.bundle), Ok(Removal { checkpoints: 1, .. })));
+    assert!(handheld.engine.unmapped_bundles().unwrap().is_empty());
+    assert!(handheld.engine.vault().checkpoints().unwrap().is_empty());
+
+    // Another device sending it again does not bring it back.
+    pc.send_to(&handheld);
+    assert!(!handheld.engine.note_remote_game(&pc.bundle, "Emerald", "PC").unwrap());
+    assert!(handheld.engine.unmapped_bundles().unwrap().is_empty());
+    assert!(handheld.engine.vault().checkpoints().unwrap().is_empty());
+
+    handheld.engine.unforget_game(&pc.bundle).unwrap();
+    pc.send_to(&handheld);
+    assert_eq!(handheld.engine.unmapped_bundles().unwrap().len(), 1);
+
+    // A game set up here must be removed first.
+    assert!(matches!(pc.engine.forget_game(&pc.bundle), Err(Error::InvalidInput(_))));
 }

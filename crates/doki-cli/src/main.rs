@@ -135,6 +135,34 @@ enum Command {
         game: String,
         checkpoint: String,
     },
+    /// Delete a checkpoint's files from this device. It keeps its place in
+    /// history; other devices keep their copies.
+    DeleteCheckpoint {
+        game: String,
+        checkpoint: String,
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Show or set how long checkpoints are kept on this device: a number of
+    /// days, or `forever` (the default). Shows what would go first.
+    Retention {
+        /// Days, or `forever`. Without it, shows the current setting.
+        days: Option<String>,
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Delete a removed game from this device (checkpoints and all). Doki
+    /// then ignores it until `unforget`.
+    Forget {
+        /// Game id, as `doki games` lists it under "Not set up here".
+        game: String,
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Stop ignoring a deleted game; it comes back with the next sync.
+    Unforget {
+        game: String,
+    },
     /// Copy a checkpoint's files to a new folder, outside Doki.
     ExportFiles {
         game: String,
@@ -315,8 +343,9 @@ fn run(cli: Cli) -> Result<(), Error> {
             }
             for u in engine.unmapped_bundles()? {
                 println!(
-                    "Not set up here: \"{}\" from {}. Link it with `doki add \"{}\" <folder> --link {}`",
-                    u.name_hint, u.from_device, u.name_hint, u.bundle_id
+                    "Not set up here: \"{}\" from {}. Link it with `doki add \"{}\" <folder> --link {}`, \
+                     or delete it with `doki forget {}`",
+                    u.name_hint, u.from_device, u.name_hint, u.bundle_id, u.bundle_id
                 );
             }
         }
@@ -533,6 +562,79 @@ fn run(cli: Cli) -> Result<(), Error> {
             let id = engine.find_checkpoint(&g.bundle_id, &checkpoint)?;
             engine.export_checkpoint_files(&id, &folder)?;
             println!("Copied checkpoint {} to {}.", id.short(), folder.display());
+        }
+        Command::DeleteCheckpoint { game, checkpoint, yes } => {
+            let g = engine.find_bundle(&game)?;
+            let id = engine.find_checkpoint(&g.bundle_id, &checkpoint)?;
+            if !yes
+                && !confirm(&format!(
+                    "Delete checkpoint {} of {} from this device? This cannot be undone here.",
+                    id.short(),
+                    g.name
+                ))
+                .unwrap_or(false)
+            {
+                println!("Nothing was deleted.");
+                return Ok(());
+            }
+            let removed = engine.delete_checkpoint(&g.bundle_id, &id)?;
+            println!("Deleted checkpoint {} ({} bytes freed).", id.short(), removed.bytes);
+        }
+        Command::Retention { days: None, .. } => match engine.settings()?.keep_days {
+            None => println!("Checkpoints are kept forever."),
+            Some(d) => println!(
+                "Checkpoints are kept for {d} days (always the {} newest per game, the current \
+                 save and pinned ones).",
+                doki_engine::KEEP_NEWEST
+            ),
+        },
+        Command::Retention { days: Some(days), yes } => {
+            let keep_days = if days == "forever" {
+                None
+            } else {
+                Some(days.parse::<u32>().map_err(|_| {
+                    Error::InvalidInput("give a number of days or `forever`".into())
+                })?)
+            };
+            if let Some(d) = keep_days {
+                let preview = engine.retention_preview(d)?;
+                if preview.checkpoints > 0
+                    && !yes
+                    && !confirm(&format!(
+                        "This deletes {} checkpoints ({} bytes) from this device now. Continue?",
+                        preview.checkpoints, preview.bytes
+                    ))
+                    .unwrap_or(false)
+                {
+                    println!("Nothing changed.");
+                    return Ok(());
+                }
+            }
+            engine.update_settings(doki_engine::SettingsChanges {
+                keep_days: Some(keep_days),
+                ..Default::default()
+            })?;
+            let removed = engine.apply_retention()?;
+            println!("Saved. Deleted {} checkpoints now.", removed.checkpoints);
+        }
+        Command::Forget { game, yes } => {
+            let id = doki_core::BundleId::parse(&game)?;
+            if !yes
+                && !confirm("Delete this game and its checkpoints from this device?")
+                    .unwrap_or(false)
+            {
+                println!("Nothing was deleted.");
+                return Ok(());
+            }
+            let removed = engine.forget_game(&id)?;
+            println!(
+                "Deleted {} checkpoints from this device. Other devices keep theirs.",
+                removed.checkpoints
+            );
+        }
+        Command::Unforget { game } => {
+            engine.unforget_game(&doki_core::BundleId::parse(&game)?)?;
+            println!("Doki will list it again when another device sends it.");
         }
         Command::Clean => {
             let freed = engine.clean_leftovers()?;
