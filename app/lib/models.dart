@@ -31,6 +31,7 @@ class Game {
   String get name => _record['name'] as String;
   String get location => _record['location'] as String;
   String? get head => _record['head'] as String?;
+  bool get autoCapture => _record['auto_capture'] as bool? ?? true;
   int get incoming => (json['incoming'] as num).toInt();
   String get rawStatus => json['status'] as String;
 
@@ -96,8 +97,13 @@ class Unmapped {
   Unmapped(Map<String, dynamic> json)
     : gameId = json['bundle_id'] as String,
       nameHint = json['name_hint'] as String,
-      fromDevice = json['from_device'] as String;
+      fromDevice = json['from_device'] as String,
+      hasProgress = json['has_progress'] as bool? ?? true;
   final String gameId, nameHint, fromDevice;
+
+  /// False when the other device only has the game set up, with no
+  /// checkpoint yet.
+  final bool hasProgress;
 }
 
 /// A review result. [json] must be passed back unchanged to `use`.

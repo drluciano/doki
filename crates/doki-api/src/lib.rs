@@ -15,9 +15,12 @@
 //! | `init` | `name` | `{device_id, device_name}` |
 //! | `device` | – | `{device_id, device_name}` |
 //! | `games` | – | `[GameSummary]` |
-//! | `unmapped` | – | `[UnmappedBundle]` games received but not set up |
+//! | `unmapped` | – | `[UnmappedBundle]` games on other devices not set up here; `has_progress` says whether progress already arrived |
 //! | `add` | `name`, `location`, `link?` | `BundleRecord` |
 //! | `capture` | `game`, `note?` (caller confirms the game is closed) | `{outcome, checkpoint}` |
+//! | `edit` | `game`, `name?`, `location?`, `auto_capture?` | `BundleRecord`; never touches save files |
+//! | `remove` | `game` | `null`; this device only, history and save folder kept |
+//! | `auto_check` | `settle_secs?` (default 30) | `[{bundle_id, name, outcome, …}]`, see `Engine::auto_check` |
 //! | `history` | `game` | `[HistoryEntry]` |
 //! | `incoming` | – | `[ReviewItem]` |
 //! | `review` | `game`, `checkpoint` | `Review` (pass back unchanged to `use`) |
@@ -49,9 +52,13 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Duration;
+
+/// How long a save folder must stay unchanged before `auto_check` captures it.
+const AUTO_SETTLE_SECS: u64 = 30;
 
 use doki_core::{BundleId, CaptureMode, CheckpointId, Error, Result};
-use doki_engine::{Engine, LocationProvider, RecoveryAction, Review};
+use doki_engine::{BundleChanges, Engine, LocationProvider, RecoveryAction, Review};
 use doki_peer::{Network, PeerNode};
 use doki_vault::Vault;
 use serde::Deserialize;
@@ -60,33 +67,89 @@ use serde_json::{json, Value};
 #[derive(Deserialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
 enum Request {
-    Init { name: String },
+    Init {
+        name: String,
+    },
     Device,
     Games,
     Unmapped,
-    Add { name: String, location: String, link: Option<String> },
-    Capture { game: String, note: Option<String> },
-    History { game: String },
+    Add {
+        name: String,
+        location: String,
+        link: Option<String>,
+    },
+    Capture {
+        game: String,
+        note: Option<String>,
+    },
+    Edit {
+        game: String,
+        name: Option<String>,
+        location: Option<String>,
+        auto_capture: Option<bool>,
+    },
+    Remove {
+        game: String,
+    },
+    AutoCheck {
+        settle_secs: Option<u64>,
+    },
+    History {
+        game: String,
+    },
     Incoming,
-    Review { game: String, checkpoint: String },
-    Use { review: Box<Review> },
-    Keep { game: String, checkpoint: String },
-    Reopen { game: String, checkpoint: String },
-    Dismiss { game: String, checkpoint: String },
-    RecoveryStatus { game: String },
-    Recover { game: String, action: Action },
-    Pin { game: String, checkpoint: String },
-    Unpin { game: String, checkpoint: String },
-    RelayCreate { url: String },
-    RelayJoin { code: String },
+    Review {
+        game: String,
+        checkpoint: String,
+    },
+    Use {
+        review: Box<Review>,
+    },
+    Keep {
+        game: String,
+        checkpoint: String,
+    },
+    Reopen {
+        game: String,
+        checkpoint: String,
+    },
+    Dismiss {
+        game: String,
+        checkpoint: String,
+    },
+    RecoveryStatus {
+        game: String,
+    },
+    Recover {
+        game: String,
+        action: Action,
+    },
+    Pin {
+        game: String,
+        checkpoint: String,
+    },
+    Unpin {
+        game: String,
+        checkpoint: String,
+    },
+    RelayCreate {
+        url: String,
+    },
+    RelayJoin {
+        code: String,
+    },
     RelayCode,
     RelayForget,
     Sync,
     PeerInvite,
-    PeerJoin { code: String },
+    PeerJoin {
+        code: String,
+    },
     PeerSync,
     PeerList,
-    PeerRemove { id: String },
+    PeerRemove {
+        id: String,
+    },
 }
 
 #[derive(Deserialize)]
@@ -181,6 +244,16 @@ fn dispatch<P: LocationProvider>(vault_path: &str, provider: P, req: Request) ->
         Request::Capture { game: g, note } => {
             to_value(engine.capture(&game(&g)?, CaptureMode::EmulatorStoppedConfirmed, note)?)
         }
+        Request::Edit { game: g, name, location, auto_capture } => to_value(
+            engine.update_bundle(&game(&g)?, BundleChanges { name, location, auto_capture })?,
+        ),
+        Request::Remove { game: g } => {
+            engine.remove_bundle(&game(&g)?)?;
+            Ok(Value::Null)
+        }
+        Request::AutoCheck { settle_secs } => to_value(
+            engine.auto_check(Duration::from_secs(settle_secs.unwrap_or(AUTO_SETTLE_SECS)))?,
+        ),
         Request::History { game: g } => to_value(engine.history(&game(&g)?)?),
         Request::Incoming => to_value(engine.incoming()?),
         Request::Review { game: g, checkpoint } => {

@@ -2,6 +2,11 @@
     <!-- Sync with a relay you host. Save folders use the Storage Access
          Framework, so no storage permission is requested. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- WatchService: checks saves and syncs while an emulator is in front.
+         Android requires a foreground service, shown as a notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Doki"
         android:usesCleartextTraffic="true"
@@ -29,6 +34,14 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <service
+            android:name=".WatchService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Checks game save folders for new progress while an emulator runs, and syncs it with the user's own devices."/>
+        </service>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

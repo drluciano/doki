@@ -124,3 +124,34 @@ fn peers_pair_and_sync_over_json() {
     let report = ok(odin, json!({"cmd": "peer_sync"}));
     assert_eq!(report["unreachable"].as_array().unwrap().len(), 1);
 }
+
+#[test]
+fn edit_remove_and_auto_check_over_json() {
+    let tmp = tempfile::tempdir().unwrap();
+    let vault = tmp.path().join("v");
+    let vault = vault.to_str().unwrap();
+    let save = tmp.path().join("save");
+    std::fs::create_dir_all(&save).unwrap();
+    ok(vault, json!({"cmd": "init", "name": "PC"}));
+    ok(vault, json!({"cmd": "add", "name": "Emerald", "location": save}));
+
+    std::fs::write(save.join("e.sav"), b"one").unwrap();
+    let first = ok(vault, json!({"cmd": "auto_check", "settle_secs": 0}));
+    assert_eq!(first[0]["outcome"], "waiting");
+    let second = ok(vault, json!({"cmd": "auto_check", "settle_secs": 0}));
+    assert_eq!(second[0]["outcome"], "created");
+    assert!(second[0]["checkpoint"].is_string());
+
+    let edited =
+        ok(vault, json!({"cmd": "edit", "game": "Emerald", "name": "Ruby", "auto_capture": false}));
+    assert_eq!(
+        (edited["name"].as_str(), edited["auto_capture"].as_bool()),
+        (Some("Ruby"), Some(false))
+    );
+    assert_eq!(ok(vault, json!({"cmd": "auto_check"})), json!([]));
+
+    ok(vault, json!({"cmd": "remove", "game": "Ruby"}));
+    assert_eq!(ok(vault, json!({"cmd": "games"})), json!([]));
+    assert_eq!(std::fs::read(save.join("e.sav")).unwrap(), b"one");
+    assert_eq!(ok(vault, json!({"cmd": "unmapped"}))[0]["name_hint"], "Ruby");
+}

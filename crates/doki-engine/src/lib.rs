@@ -26,11 +26,13 @@ use doki_platform::SaveLocation;
 use doki_vault::{now_rfc3339, random_hex, Vault, VaultLock};
 
 mod install;
+mod manage;
 mod package;
 mod proposals;
 pub mod records;
 
 pub use install::{FileState, RecoveryAction, RecoveryOutcome, RecoveryStatus, UseOutcome};
+pub use manage::{AutoCheck, AutoOutcome, BundleChanges};
 pub use package::{ImportSummary, PACKAGE_FORMAT};
 pub use proposals::{Review, ReviewItem};
 pub use records::{BundleRecord, Journal, Proposal, ProposalStatus, UnmappedBundle};
@@ -141,22 +143,8 @@ impl<P: LocationProvider> Engine<P> {
         if name.trim().is_empty() {
             return Err(Error::InvalidInput("a game name is required".into()));
         }
-        self.provider.open(location).check_available()?;
-        let location = normalize_location(location);
-        if is_within(self.vault.root(), Path::new(&location))
-            || is_within(Path::new(&location), self.vault.root())
-        {
-            return Err(Error::InvalidInput(
-                "the save folder and Doki's vault must not contain each other".into(),
-            ));
-        }
+        let location = self.check_location(location, None)?;
         for existing in self.bundles()? {
-            if existing.location == location {
-                return Err(Error::InvalidInput(format!(
-                    "this folder is already set up for {}",
-                    existing.name
-                )));
-            }
             if Some(&existing.bundle_id) == bundle_id.as_ref() {
                 return Err(Error::InvalidInput(format!(
                     "this game is already set up as {}",
@@ -172,6 +160,7 @@ impl<P: LocationProvider> Engine<P> {
             head: None,
             pins: Default::default(),
             created_at: now_rfc3339(),
+            auto_capture: true,
         };
         self.vault.put_record(BUNDLES, record.bundle_id.as_str(), &record)?;
         self.vault.delete_record(records::UNMAPPED, record.bundle_id.as_str())?;

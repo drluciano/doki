@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'backend.dart';
 import 'motion.dart';
@@ -16,7 +19,14 @@ import 'widgets/focus_halo.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final backend = await DokiBackend.forPlatform();
-  runApp(DokiApp(state: AppState(backend, autoSync: true)..refresh()));
+  final state = AppState(backend, autoSync: true, autoCapture: true)..refresh();
+  if (Platform.isWindows) {
+    // "Sync now" in the tray menu (windows/runner/flutter_window.cpp).
+    const MethodChannel('dev.doki/window').setMethodCallHandler((call) async {
+      if (call.method == 'sync') await state.sync().catchError((_) => null);
+    });
+  }
+  runApp(DokiApp(state: state));
 }
 
 /// Makes [AppState] available to every screen.

@@ -213,3 +213,33 @@ fn a_removed_device_can_be_paired_again() {
     let report = lost.node.sync_all().unwrap();
     assert!(report.unreachable.is_empty(), "{:?}", report.unreachable);
 }
+
+#[test]
+fn a_game_set_up_on_one_device_is_offered_on_the_others_right_away() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (pc, odin) = (Device::new(tmp.path(), "PC"), Device::new(tmp.path(), "Odin"));
+    odin.node.join(&pc.node.invite().unwrap().code).unwrap();
+
+    // PC sets up a game but has no checkpoint yet.
+    let game = pc.add_game("Emerald", None);
+    odin.node.sync_all().unwrap();
+    let offered = odin.engine().unmapped_bundles().unwrap();
+    assert_eq!(offered.len(), 1);
+    assert_eq!(
+        (offered[0].bundle_id.clone(), offered[0].name_hint.as_str()),
+        (game.clone(), "Emerald")
+    );
+    assert_eq!(offered[0].from_device, "PC");
+    assert!(!offered[0].has_progress);
+
+    // Odin sets it up with its own folder; nothing is offered twice.
+    odin.add_game("Emerald", Some(&game));
+    odin.node.sync_all().unwrap();
+    assert!(odin.engine().unmapped_bundles().unwrap().is_empty());
+
+    // Progress made on PC later arrives for review as usual.
+    pc.play(&game, b"one");
+    pc.node.sync_all().unwrap();
+    assert_eq!(odin.incoming(), 1);
+    assert!(!odin.save.join("game.sav").exists());
+}

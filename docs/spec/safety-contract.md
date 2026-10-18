@@ -78,7 +78,9 @@ Purpose: copy the playable bundle into the vault. Never writes playable files.
 | C5 Store | Checkpoint written atomically after all its objects exist | Either stored or not. |
 | C6 Move head | Bundle record replaced atomically | If C5 happened but not C6, the next capture of the same bytes adopts that checkpoint instead of creating a twin. |
 
-Rules: identical bytes to head → "No changes since …", nothing stored. Empty folder → `BundleIncomplete`. `capture_mode` records the actual certainty; the MVP asks the user to confirm the game is closed.
+Rules: identical bytes to head → "No changes since …", nothing stored. Empty folder → `BundleIncomplete`. `capture_mode` records the actual certainty: `emulator-stopped-confirmed` when the user confirmed the game is closed, `quiescence-heuristic` for automatic checkpoints.
+
+**Automatic checkpoints** (`Engine::auto_check`, on per game by default): the folder is hashed on every look (every 15 seconds in the app and the Android watcher). A state different from head is remembered with the time it was first seen; any further change restarts the wait. Only when two looks at least the settle time apart (30 seconds) see the same bytes does it run the capture above, whose C4 re-read still refuses a folder that moves during the copy (then the wait starts over). A folder that cannot be read, a held lock or an open journal skips that game for that look; it is never an error and never a write. Automatic checkpoints are a heuristic: a game that writes its save in pieces more than the settle time apart can be captured between pieces, which is why every checkpoint stays in history and nothing is ever installed without review.
 
 ## 5. Receive and proposals
 
@@ -153,6 +155,7 @@ Each adapter reports how it replaces a file (`ReplaceMode`): `Atomic` (rename ov
 - Pinned checkpoints are protected from any future cleanup.
 - **[default]** There is no automatic deletion of checkpoints in the MVP. `clean` removes only temporary files and objects no checkpoint references.
 - Checkpoint cleanup (C06) must: compute roots (pins, heads, tips, set-aside checkpoints, open journals, pending proposals, in-flight transfers) under the bundle locks; preview what goes; keep ancestry metadata; and never be triggered by missing folders, remote absence or a full disk.
+- **Removing a game** (`Engine::remove_bundle`) only removes its setup on this device: the save folder is untouched, every checkpoint stays in the vault, reviewable offers are dropped (they come back with the next sync) and the game is listed for setup again, which brings its history back. Refused while an install waits for recovery. Editing a game (name, folder, automatic checkpoints) never reads or writes save files; after a folder change the next capture records the new folder's contents as a child of head.
 - Deleting is local to the device by default. Deleting everywhere will be an explicit, reviewed request; no device acts on it automatically.
 
 ## 8. Integrity versus validity

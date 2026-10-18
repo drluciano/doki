@@ -12,11 +12,23 @@ class AppState extends ChangeNotifier {
   /// With [autoSync], syncs with paired devices when the app opens, every
   /// [syncEvery] while it is open, and when it comes back to the
   /// foreground. Received progress only ever lands in Incoming.
-  AppState(this.backend, {this.autoSync = false, this.syncEvery = const Duration(minutes: 2)});
+  ///
+  /// With [autoCapture], asks the engine every [checkEvery] to checkpoint
+  /// save folders that changed and then stopped changing (`auto_check`).
+  /// On Android a background service does the same while the app is closed.
+  AppState(
+    this.backend, {
+    this.autoSync = false,
+    this.syncEvery = const Duration(minutes: 2),
+    this.autoCapture = false,
+    this.checkEvery = const Duration(seconds: 15),
+  });
 
   final DokiBackend backend;
   final bool autoSync;
   final Duration syncEvery;
+  final bool autoCapture;
+  final Duration checkEvery;
 
   bool loaded = false;
   String? deviceName;
@@ -33,7 +45,16 @@ class AppState extends ChangeNotifier {
   bool syncing = false;
   Object? loadError;
 
+  /// Whether Doki keeps working when its window is closed (Android's
+  /// background service, Windows' tray); null where the platform has neither.
+  bool? backgroundWatching;
+
+  /// Whether Doki starts when the user signs in; null where not managed.
+  bool? startWithSystem;
+
   Timer? _timer;
+  Timer? _checkTimer;
+  bool _checking = false;
   AppLifecycleListener? _lifecycle;
 
   bool get initialized => deviceName != null;
@@ -79,6 +100,7 @@ class AppState extends ChangeNotifier {
     loaded = true;
     notifyListeners();
     _startAutoSync();
+    _startAutoCapture();
   }
 
   Future<void> init(String name) async {
@@ -149,8 +171,45 @@ class AppState extends ChangeNotifier {
     unawaited(_quietSync());
   }
 
+  /// Look for settled changes now. Refreshes when a checkpoint was taken.
+  Future<void> autoCheck() async {
+    if (!initialized || games.isEmpty || _checking) return;
+    _checking = true;
+    try {
+      final checks = await backend.call('auto_check') as List;
+      if (checks.any((c) => (c as Map)['outcome'] == 'created')) await refresh();
+    } catch (_) {
+      // Per-game problems already show as the game's status.
+    } finally {
+      _checking = false;
+    }
+  }
+
+  Future<void> setBackgroundWatching(bool on) async {
+    await backend.setBackgroundWatching(on);
+    backgroundWatching = on;
+    notifyListeners();
+  }
+
+  Future<void> setStartWithSystem(bool on) async {
+    await backend.setStartWithSystem(on);
+    startWithSystem = on;
+    notifyListeners();
+  }
+
+  void _startAutoCapture() {
+    if (!autoCapture || !initialized || _checkTimer != null) return;
+    _checkTimer = Timer.periodic(checkEvery, (_) => autoCheck());
+    unawaited(() async {
+      backgroundWatching = await backend.backgroundWatching();
+      startWithSystem = await backend.startWithSystem();
+      notifyListeners();
+    }());
+  }
+
   @override
   void dispose() {
+    _checkTimer?.cancel();
     _timer?.cancel();
     _lifecycle?.dispose();
     super.dispose();

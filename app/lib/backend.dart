@@ -47,6 +47,20 @@ abstract class DokiBackend {
   /// Ask the user for a save folder. Null when they cancel.
   Future<PickedFolder?> pickFolder();
 
+  /// Whether save folders are watched while the app is closed, or null
+  /// where that is not available (Linux). On Android this is the background
+  /// service; on Windows it is "keep in tray": closing or minimizing hides
+  /// Doki to the notification area instead of quitting.
+  Future<bool?> backgroundWatching();
+
+  Future<void> setBackgroundWatching(bool on);
+
+  /// Whether Doki starts (in the tray) when the user signs in, or null where
+  /// the app does not manage that (everywhere but Windows).
+  Future<bool?> startWithSystem();
+
+  Future<void> setStartWithSystem(bool on);
+
   static Future<DokiBackend> forPlatform() async {
     if (Platform.isAndroid) return ChannelBackend();
     final support = await getApplicationSupportDirectory();
@@ -95,6 +109,19 @@ class ChannelBackend implements DokiBackend {
       throw DokiError(e.code, e.message ?? 'Could not open the folder picker');
     }
   }
+
+  @override
+  Future<bool?> backgroundWatching() => _channel.invokeMethod<bool>('isWatching');
+
+  @override
+  Future<void> setBackgroundWatching(bool on) =>
+      _channel.invokeMethod<void>('setWatching', {'enabled': on});
+
+  @override
+  Future<bool?> startWithSystem() async => null;
+
+  @override
+  Future<void> setStartWithSystem(bool on) async {}
 }
 
 typedef _CallNative = Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>);
@@ -167,4 +194,38 @@ class FfiBackend implements DokiBackend {
     final name = path.split(RegExp(r'[\\/]')).where((s) => s.isNotEmpty).lastOrNull ?? path;
     return PickedFolder(path, name);
   }
+
+  // The Windows runner keeps Doki in the tray (windows/runner/flutter_window.h).
+  // Linux has no tray yet, so Doki watches only while its window is open.
+  static const _window = MethodChannel('dev.doki/window');
+
+  Future<bool?> _windowSetting(String name) async {
+    if (!Platform.isWindows) return null;
+    try {
+      return await _window.invokeMethod<bool>('get$name');
+    } on MissingPluginException {
+      return null; // Tests and tools that run without the runner.
+    }
+  }
+
+  Future<void> _setWindowSetting(String name, bool on) async {
+    if (!Platform.isWindows) return;
+    try {
+      await _window.invokeMethod<void>('set$name', {'enabled': on});
+    } on PlatformException catch (e) {
+      throw DokiError(e.code, e.message ?? 'Windows did not save the setting');
+    }
+  }
+
+  @override
+  Future<bool?> backgroundWatching() => _windowSetting('KeepInTray');
+
+  @override
+  Future<void> setBackgroundWatching(bool on) => _setWindowSetting('KeepInTray', on);
+
+  @override
+  Future<bool?> startWithSystem() => _windowSetting('StartWithWindows');
+
+  @override
+  Future<void> setStartWithSystem(bool on) => _setWindowSetting('StartWithWindows', on);
 }

@@ -1,9 +1,13 @@
 package dev.doki.app;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -27,11 +31,13 @@ import io.flutter.plugin.common.MethodChannel;
  * background thread, one at a time per lane: requests that wait on other
  * devices ({@code lane: "network"}) get their own thread so a slow network
  * never holds up the rest of the app; {@code pickFolder}
- * asks the system folder picker for a save folder and keeps the grant.
+ * asks the system folder picker for a save folder and keeps the grant;
+ * {@code setWatching} and {@code isWatching} control {@link WatchService}.
  */
 public class MainActivity extends FlutterActivity {
     private static final String CHANNEL = "dev.doki/engine";
     private static final int PICK_FOLDER = 4201;
+    private static final int ASK_NOTIFY = 4202;
 
     private final ExecutorService engine = Executors.newSingleThreadExecutor();
     private final ExecutorService network = Executors.newSingleThreadExecutor();
@@ -59,6 +65,16 @@ public class MainActivity extends FlutterActivity {
                 });
                 break;
             }
+            case "setWatching": {
+                boolean enabled = Boolean.TRUE.equals(call.argument("enabled"));
+                if (enabled) askToNotify();
+                WatchService.setEnabled(this, enabled);
+                result.success(null);
+                break;
+            }
+            case "isWatching":
+                result.success(WatchService.isEnabled(this));
+                break;
             case "pickFolder": {
                 if (pendingPick != null) {
                     result.error("Busy", "A folder picker is already open", null);
@@ -75,6 +91,25 @@ public class MainActivity extends FlutterActivity {
             }
             default:
                 result.notImplemented();
+        }
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Keep checking saves while an emulator is in front, unless turned off.
+        if (WatchService.isEnabled(this)) {
+            askToNotify();
+            WatchService.setEnabled(this, true);
+        }
+    }
+
+    /** Android 13+ hides the watching notification unless allowed. */
+    private void askToNotify() {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[] {Manifest.permission.POST_NOTIFICATIONS}, ASK_NOTIFY);
         }
     }
 
