@@ -11,7 +11,8 @@ import 'game.dart';
 
 String statusText(Game g) => switch (g.status) {
   GameStatus.protected => 'Protected by a checkpoint',
-  GameStatus.uncapturedChanges => 'New progress not in a checkpoint yet',
+  GameStatus.uncapturedChanges =>
+    g.autoCapture ? 'New progress, checkpoint coming soon' : 'New progress not in a checkpoint yet',
   GameStatus.noCheckpoint => 'No checkpoint yet',
   GameStatus.needsRecovery => 'Needs your choice: finish or put back',
   GameStatus.unavailable => errorCopy(g.unavailableCode ?? '').title,

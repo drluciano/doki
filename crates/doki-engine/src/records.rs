@@ -12,6 +12,7 @@ pub(crate) const BUNDLES: &str = "bundles";
 pub(crate) const PROPOSALS: &str = "proposals";
 pub(crate) const JOURNALS: &str = "journals";
 pub(crate) const UNMAPPED: &str = "unmapped";
+pub(crate) const WATCH: &str = "watch";
 
 pub const JOURNAL_FORMAT: u32 = 1;
 
@@ -32,6 +33,10 @@ pub struct BundleRecord {
     #[serde(default)]
     pub pins: BTreeSet<CheckpointId>,
     pub created_at: String,
+    /// Take checkpoints on its own once the save folder has stopped
+    /// changing ([`crate::Engine::auto_check`]). On unless turned off.
+    #[serde(default = "yes")]
+    pub auto_capture: bool,
 }
 
 /// What the user decided about incoming progress.

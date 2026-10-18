@@ -1,6 +1,7 @@
 import 'package:doki/backend.dart';
 import 'package:doki/main.dart';
 import 'package:doki/screens/devices.dart';
+import 'package:doki/screens/game.dart';
 import 'package:doki/screens/review.dart';
 import 'package:doki/state.dart';
 import 'package:flutter/material.dart';
@@ -63,7 +64,7 @@ void main() {
     final backend = FakeBackend(ready([game('uncaptured_changes', incoming: 1)]));
     await pump(tester, backend);
     expect(find.text('Emerald'), findsOneWidget);
-    expect(find.text('New progress not in a checkpoint yet'), findsOneWidget);
+    expect(find.text('New progress, checkpoint coming soon'), findsOneWidget);
     expect(find.text('1 incoming'), findsOneWidget);
   });
 
@@ -287,7 +288,7 @@ void main() {
               {
                 'bundle_id': 'b9',
                 'name_hint': 'Emerald',
-                'from_device': 'PC',
+                'from_device': 'Deck',
                 'has_progress': false,
               },
             ])
@@ -299,16 +300,105 @@ void main() {
       ..folder = const PickedFolder('content://saves/emerald', 'emerald');
     await pump(tester, backend);
     expect(find.text('On your other devices'), findsOneWidget);
-    expect(find.textContaining('Set up on PC'), findsOneWidget);
+    expect(find.textContaining('Set up on Deck'), findsOneWidget);
 
     await tester.tap(find.text('Emerald'));
     await tester.pumpAndSettle();
-    expect(find.text('Already set up on PC'), findsOneWidget);
+    expect(find.text('Already set up on Deck'), findsOneWidget);
     await tester.tap(find.text('Choose'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Connect folder'));
     await tester.pumpAndSettle();
     expect(added, {'name': 'Emerald', 'location': 'content://saves/emerald', 'link': 'b9'});
     expect(find.text('On your other devices'), findsNothing);
+  });
+
+  group('game actions', () {
+    setUp(() {
+      final view = TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(800, 2000);
+      view.devicePixelRatio = 1;
+    });
+    tearDown(() => TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!.reset());
+
+    Map<String, dynamic Function(Map<String, dynamic>)> gameHandlers(List<String> log) {
+      var games = [game('protected')];
+      return ready([])
+        ..['games'] = ((_) => games)
+        ..['history'] = ((_) => [])
+        ..['recovery_status'] = ((_) => null)
+        ..['edit'] = ((args) {
+          log.add('edit ${args['name']} ${args['location']} ${args['auto_capture']}');
+          return {};
+        })
+        ..['remove'] = ((args) {
+          log.add('remove ${args['game']}');
+          games = [];
+          return null;
+        });
+    }
+
+    testWidgets('editing changes the title, folder and automatic checkpoints', (tester) async {
+      final log = <String>[];
+      final backend = FakeBackend(gameHandlers(log))
+        ..folder = const PickedFolder('/saves/new', 'new');
+      await pump(tester, backend, home: const GameScreen(gameId: 'b1'));
+      expect(find.textContaining('Automatic checkpoints are on'), findsOneWidget);
+      await tester.tap(find.byTooltip('Game actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit game'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, 'Game title'), 'Emerald (US)');
+      await tester.tap(find.text('Change'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Automatic checkpoints'));
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+      expect(log, ['edit Emerald (US) /saves/new false']);
+    });
+
+    testWidgets('removing asks first, explains what is kept, then leaves', (tester) async {
+      final log = <String>[];
+      await pump(tester, FakeBackend(gameHandlers(log)), home: const GameScreen(gameId: 'b1'));
+      await tester.tap(find.byTooltip('Game actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove from this device'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('every checkpoint is kept'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(log, isEmpty);
+
+      await tester.tap(find.byTooltip('Game actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove from this device'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
+      expect(log, ['remove b1']);
+    });
+
+    testWidgets('the app checks for settled saves on its own and refreshes', (tester) async {
+      var created = false;
+      final handlers = ready([game('uncaptured_changes')])
+        ..['auto_check'] = ((_) {
+          created = true;
+          return [
+            {'bundle_id': 'b1', 'name': 'Emerald', 'outcome': 'created', 'checkpoint': 'c9'},
+          ];
+        });
+      final backend = FakeBackend(handlers)..watching = true;
+      final state = AppState(backend, autoCapture: true, checkEvery: const Duration(seconds: 15));
+      await state.refresh();
+      expect(state.backgroundWatching, isNull, reason: 'read asynchronously');
+      await tester.pump();
+      expect(state.backgroundWatching, isTrue);
+      final before = backend.calls.where((c) => c == 'games').length;
+      await tester.pump(const Duration(seconds: 15));
+      expect(created, isTrue);
+      expect(backend.calls.where((c) => c == 'games').length, before + 1);
+      expect(backend.calls, isNot(contains('use')), reason: 'automatic checkpoints never install');
+      state.dispose();
+    });
   });
 }

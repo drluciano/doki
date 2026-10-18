@@ -51,6 +51,29 @@ enum Command {
         #[arg(long)]
         note: Option<String>,
     },
+    /// Rename a game, point it at another save folder, or turn automatic
+    /// checkpoints on or off. Never touches save files.
+    Edit {
+        game: String,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        folder: Option<PathBuf>,
+        /// `on` or `off`.
+        #[arg(long, value_parser = ["on", "off"])]
+        auto: Option<String>,
+    },
+    /// Remove a game from this device. Its save folder and checkpoints stay;
+    /// other devices keep it.
+    Remove {
+        game: String,
+    },
+    /// Keep checking save folders and save a checkpoint whenever one has
+    /// stopped changing for `--settle` seconds. Never writes save folders.
+    Watch {
+        #[arg(long, default_value_t = 30)]
+        settle: u64,
+    },
     /// Show a game's checkpoints, oldest first.
     History {
         game: String,
@@ -295,6 +318,47 @@ fn run(cli: Cli) -> Result<(), Error> {
                     "Not set up here: \"{}\" from {}. Link it with `doki add \"{}\" <folder> --link {}`",
                     u.name_hint, u.from_device, u.name_hint, u.bundle_id
                 );
+            }
+        }
+        Command::Edit { game, name, folder, auto } => {
+            let g = engine.find_bundle(&game)?;
+            let changes = doki_engine::BundleChanges {
+                name,
+                location: folder.map(|f| f.to_string_lossy().into_owned()),
+                auto_capture: auto.map(|a| a == "on"),
+            };
+            let r = engine.update_bundle(&g.bundle_id, changes)?;
+            let auto = if r.auto_capture { "on" } else { "off" };
+            println!(
+                "{}: {} · automatic checkpoints {auto}. No save files were changed.",
+                r.name, r.location
+            );
+        }
+        Command::Remove { game } => {
+            let g = engine.find_bundle(&game)?;
+            engine.remove_bundle(&g.bundle_id)?;
+            println!(
+                "Removed {} from this device. Its save folder and checkpoints are kept; \
+                 `doki add` with --link {} brings it back.",
+                g.name,
+                g.bundle_id.short()
+            );
+        }
+        Command::Watch { settle } => {
+            println!("Watching save folders. A checkpoint is saved {settle}s after a save stops changing. Ctrl+C to stop.");
+            loop {
+                for check in engine.auto_check(std::time::Duration::from_secs(settle))? {
+                    match check.outcome {
+                        doki_engine::AutoOutcome::Created { checkpoint } => {
+                            println!("{}: checkpoint {} saved.", check.name, checkpoint.short())
+                        }
+                        doki_engine::AutoOutcome::Skipped { message, .. } => {
+                            println!("{}: not checked ({message}).", check.name)
+                        }
+                        _ => {}
+                    }
+                }
+                std::thread::sleep(std::time::Duration::from_secs(5));
             }
         }
         Command::Capture { game, closed, note } => {

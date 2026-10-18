@@ -47,6 +47,9 @@ doki use "Emerald" <checkpoint>       # shows the review, asks, then backs up an
 | `history GAME` | Checkpoints, oldest first by ancestry | No |
 | `send GAME… -o FILE` | Handoff file with your current saves and history | No |
 | `receive FILE` | Verify and store a handoff file | No |
+| `edit GAME [--name N] [--folder F] [--auto on\|off]` | Rename, change folder, automatic checkpoints | No |
+| `remove GAME` | Remove from this device; folder and checkpoints kept | No |
+| `watch [--settle S]` | Save a checkpoint whenever a save stops changing | No |
 | `incoming` | Incoming progress waiting for review | No |
 | `use GAME CP [--yes]` | Review, back up, install, verify | **Yes**, after backup |
 | `restore GAME CP [--yes]` | Same as use, for a checkpoint from history | **Yes**, after backup |

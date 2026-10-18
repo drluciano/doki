@@ -5,6 +5,7 @@ import '../main.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import 'edit_game.dart';
 import 'library.dart';
 import 'review.dart';
 
@@ -160,7 +161,37 @@ class _GameScreenState extends State<GameScreen> {
     final blocked = _recovery != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(game.name)),
+      appBar: AppBar(
+        title: Text(game.name),
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Game actions',
+            onSelected: (choice) async {
+              if (choice == 'edit') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(builder: (_) => EditGameScreen(game: game)),
+                );
+              } else if (choice == 'remove' && await confirmRemoveGame(context, game)) {
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'edit',
+                child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Edit game')),
+              ),
+              PopupMenuItem(
+                value: 'remove',
+                child: ListTile(
+                  leading: Icon(Icons.remove_circle_outline),
+                  title: Text('Remove from this device'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _reload,
         child: ListView(
@@ -208,8 +239,15 @@ class _GameScreenState extends State<GameScreen> {
                             ? null
                             : () => _capture(game),
                         icon: const Icon(Icons.bookmark_add_outlined),
-                        label: const Text('Create checkpoint'),
+                        label: Text(game.autoCapture ? 'Checkpoint now' : 'Create checkpoint'),
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      game.autoCapture
+                          ? 'Automatic checkpoints are on: Doki saves one when the save stops changing.'
+                          : 'Automatic checkpoints are off. Turn them on in Edit game.',
+                      style: text.bodySmall?.copyWith(color: DokiColors.muted),
                     ),
                   ],
                   if (incoming.isNotEmpty) ...[

@@ -19,6 +19,14 @@ class FakeBackend implements DokiBackend {
 
   @override
   Future<PickedFolder?> pickFolder() async => folder;
+
+  bool? watching;
+
+  @override
+  Future<bool?> backgroundWatching() async => watching;
+
+  @override
+  Future<void> setBackgroundWatching(bool on) async => watching = on;
 }
 
 Map<String, dynamic> checkpoint({

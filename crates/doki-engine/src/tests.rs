@@ -844,3 +844,106 @@ fn delete_then_rename_storage_is_recoverable_at_every_write() {
         }
     }
 }
+
+#[test]
+fn automatic_checkpoints_wait_for_the_folder_to_settle() {
+    let d = device("PC", None);
+    let settle = std::time::Duration::from_secs(1);
+    let outcome = |d: &Device| d.engine.auto_check(settle).unwrap().remove(0).outcome;
+
+    // An empty folder has nothing to capture.
+    assert_eq!(outcome(&d), AutoOutcome::Unchanged);
+    // A change is seen, then must stay the same for the settle time.
+    d.play(&files(&[("a.sav", b"1")]));
+    assert_eq!(outcome(&d), AutoOutcome::Waiting);
+    assert_eq!(outcome(&d), AutoOutcome::Waiting);
+    // Still being written: the wait starts over.
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    d.play(&files(&[("a.sav", b"12")]));
+    assert_eq!(outcome(&d), AutoOutcome::Waiting);
+    assert!(d.engine.bundle(&d.bundle).unwrap().head.is_none());
+    std::thread::sleep(std::time::Duration::from_millis(2100));
+    let AutoOutcome::Created { checkpoint } = outcome(&d) else { panic!("expected a checkpoint") };
+    let cp = d.engine.vault().checkpoint(&checkpoint).unwrap();
+    assert_eq!(cp.capture_mode, CaptureMode::QuiescenceHeuristic);
+    assert_eq!(d.engine.bundle(&d.bundle).unwrap().head, Some(checkpoint));
+    assert_eq!(outcome(&d), AutoOutcome::Unchanged);
+    // Never written: the save is exactly what was played.
+    assert_eq!(d.save(), files(&[("a.sav", b"12")]));
+
+    // Turned off: not looked at.
+    d.engine
+        .update_bundle(&d.bundle, BundleChanges { auto_capture: Some(false), ..Default::default() })
+        .unwrap();
+    assert!(d.engine.auto_check(settle).unwrap().is_empty());
+}
+
+#[test]
+fn a_missing_folder_is_skipped_not_an_error() {
+    let d = device("PC", None);
+    let moved = d.save_dir.path().with_extension("gone");
+    fs::rename(d.save_dir.path(), &moved).unwrap();
+    let checks = d.engine.auto_check(std::time::Duration::ZERO).unwrap();
+    fs::rename(&moved, d.save_dir.path()).unwrap();
+    assert!(
+        matches!(&checks[0].outcome, AutoOutcome::Skipped { code, .. } if code == "SourceUnavailable")
+    );
+}
+
+#[test]
+fn editing_a_game_checks_the_new_folder_and_never_touches_saves() {
+    let d = device("PC", None);
+    d.play(&files(&[("a.sav", b"1")]));
+    let head = d.capture();
+    let other = tempfile::tempdir().unwrap();
+    let changes = |name: Option<&str>, location: Option<&Path>| BundleChanges {
+        name: name.map(str::to_owned),
+        location: location.map(|p| p.to_str().unwrap().to_owned()),
+        auto_capture: None,
+    };
+    let record = d
+        .engine
+        .update_bundle(&d.bundle, changes(Some(" Emerald (US) "), Some(other.path())))
+        .unwrap();
+    assert_eq!(record.name, "Emerald (US)");
+    assert_eq!(record.head, Some(head));
+    assert_eq!(d.save(), files(&[("a.sav", b"1")]));
+    assert!(fs::read_dir(other.path()).unwrap().next().is_none());
+
+    assert!(matches!(
+        d.engine.update_bundle(&d.bundle, changes(Some("  "), None)),
+        Err(Error::InvalidInput(_))
+    ));
+    assert!(matches!(
+        d.engine.update_bundle(&d.bundle, changes(None, Some(&other.path().join("missing")))),
+        Err(Error::SourceUnavailable(_))
+    ));
+    // Another game's folder is refused.
+    let second = tempfile::tempdir().unwrap();
+    d.engine.add_bundle("Ruby", second.path().to_str().unwrap(), None).unwrap();
+    assert!(matches!(
+        d.engine.update_bundle(&d.bundle, changes(None, Some(second.path()))),
+        Err(Error::InvalidInput(_))
+    ));
+}
+
+#[test]
+fn removing_a_game_keeps_its_history_and_save_and_can_be_undone() {
+    let d = device("PC", None);
+    d.play(&files(&[("a.sav", b"1")]));
+    let head = d.capture();
+    d.engine.remove_bundle(&d.bundle).unwrap();
+    assert!(d.engine.bundles().unwrap().is_empty());
+    assert_eq!(d.save(), files(&[("a.sav", b"1")]));
+    assert!(d.engine.vault().checkpoint(&head).is_ok());
+    let listed = d.engine.unmapped_bundles().unwrap();
+    assert_eq!(listed[0].from_device, "PC");
+    assert!(listed[0].has_progress);
+
+    // Setting it up again brings the history back.
+    d.engine
+        .add_bundle("Pokémon Emerald", d.save_dir.path().to_str().unwrap(), Some(d.bundle.clone()))
+        .unwrap();
+    let history = d.engine.history(&d.bundle).unwrap();
+    assert!(history.iter().any(|e| e.id == head));
+}

@@ -14,7 +14,7 @@ import 'widgets/focus_halo.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final backend = await DokiBackend.forPlatform();
-  runApp(DokiApp(state: AppState(backend, autoSync: true)..refresh()));
+  runApp(DokiApp(state: AppState(backend, autoSync: true, autoCapture: true)..refresh()));
 }
 
 /// Makes [AppState] available to every screen.

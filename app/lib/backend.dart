@@ -47,6 +47,12 @@ abstract class DokiBackend {
   /// Ask the user for a save folder. Null when they cancel.
   Future<PickedFolder?> pickFolder();
 
+  /// Whether save folders are watched while the app is closed, or null
+  /// where that is not available (desktop).
+  Future<bool?> backgroundWatching();
+
+  Future<void> setBackgroundWatching(bool on);
+
   static Future<DokiBackend> forPlatform() async {
     if (Platform.isAndroid) return ChannelBackend();
     final support = await getApplicationSupportDirectory();
@@ -95,6 +101,13 @@ class ChannelBackend implements DokiBackend {
       throw DokiError(e.code, e.message ?? 'Could not open the folder picker');
     }
   }
+
+  @override
+  Future<bool?> backgroundWatching() => _channel.invokeMethod<bool>('isWatching');
+
+  @override
+  Future<void> setBackgroundWatching(bool on) =>
+      _channel.invokeMethod<void>('setWatching', {'enabled': on});
 }
 
 typedef _CallNative = Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>);
@@ -167,4 +180,11 @@ class FfiBackend implements DokiBackend {
     final name = path.split(RegExp(r'[\\/]')).where((s) => s.isNotEmpty).lastOrNull ?? path;
     return PickedFolder(path, name);
   }
+
+  // Desktop watches while the app is open; there is no background watcher.
+  @override
+  Future<bool?> backgroundWatching() async => null;
+
+  @override
+  Future<void> setBackgroundWatching(bool on) async {}
 }

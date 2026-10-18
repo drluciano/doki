@@ -50,7 +50,7 @@ class IncomingScreen extends StatelessWidget {
                               ),
                               leading: GameBadge(u.nameHint, size: 40),
                               title: Text(u.nameHint),
-                              subtitle: Text(remoteGameLine(u)),
+                              subtitle: Text(remoteGameLine(u, thisDevice: state.deviceName)),
                               trailing: const Icon(Icons.chevron_right),
                               onTap: () => Navigator.push(
                                 context,

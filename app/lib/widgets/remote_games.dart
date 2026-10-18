@@ -33,7 +33,7 @@ class RemoteGamesSection extends StatelessWidget {
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               leading: GameBadge(u.nameHint, size: 40),
               title: Text(u.nameHint),
-              subtitle: Text(remoteGameLine(u)),
+              subtitle: Text(remoteGameLine(u, thisDevice: state.deviceName)),
               trailing: const Icon(Icons.add_circle_outline, color: DokiColors.lavender),
               onTap: () => onPicked != null
                   ? onPicked!(u)
@@ -48,6 +48,8 @@ class RemoteGamesSection extends StatelessWidget {
   }
 }
 
-String remoteGameLine(Unmapped u) => u.hasProgress
+String remoteGameLine(Unmapped u, {String? thisDevice}) => u.fromDevice == thisDevice
+    ? 'Removed from this device. Set it up again to bring back its history.'
+    : u.hasProgress
     ? 'Progress arrived from ${u.fromDevice}. Choose where it saves here to review it.'
     : 'Set up on ${u.fromDevice}. Choose where it saves here to keep them in step.';

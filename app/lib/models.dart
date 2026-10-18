@@ -31,6 +31,7 @@ class Game {
   String get name => _record['name'] as String;
   String get location => _record['location'] as String;
   String? get head => _record['head'] as String?;
+  bool get autoCapture => _record['auto_capture'] as bool? ?? true;
   int get incoming => (json['incoming'] as num).toInt();
   String get rawStatus => json['status'] as String;
 

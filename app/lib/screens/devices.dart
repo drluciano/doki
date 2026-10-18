@@ -112,6 +112,18 @@ class _DevicesScreenState extends State<DevicesScreen> {
                     subtitle: const Text('This device'),
                   ),
                 ),
+                if (state.backgroundWatching != null)
+                  Card(
+                    child: SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      value: state.backgroundWatching!,
+                      onChanged: (on) => guarded(context, () => state.setBackgroundWatching(on)),
+                      title: const Text('Keep working in the background'),
+                      subtitle: const Text(
+                        'Saves checkpoints and syncs while you play, with a notification showing. Turn off to only work while Doki is open.',
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 16),
                 _YourDevices(state: state, onSync: _sync, onRemove: _remove),
                 const SizedBox(height: 16),

@@ -69,7 +69,9 @@ class _AddGameScreenState extends State<AddGameScreen> {
             children: [
               if (link != null) ...[
                 StatusBanner(
-                  link.hasProgress
+                  link.fromDevice == AppScope.of(context).deviceName
+                      ? 'Set up again to bring back its history'
+                      : link.hasProgress
                       ? 'Progress arrived from ${link.fromDevice}'
                       : 'Already set up on ${link.fromDevice}',
                   detail: link.hasProgress
