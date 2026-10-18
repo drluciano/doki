@@ -85,8 +85,7 @@ jobs:
           curl -sSfL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" | tar xJ -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - name: Build engine library
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+        # cargo-ndk finds the runner's NDK through ANDROID_NDK_ROOT.
         run: tools/build-android-engine.sh
       - name: Build APK
         working-directory: app
