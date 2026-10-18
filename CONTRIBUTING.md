@@ -23,6 +23,9 @@ CI runs the same commands on Linux and Windows (`.github/workflows/rust.yml`).
 | `crates/doki-relay` | Self-hostable relay server (`doki-relay`). |
 | `crates/doki-sync` | Relay client: pairing, encryption, sync. |
 | `crates/doki-cli` | The `doki` command. |
+| `crates/doki-api` | JSON command interface used by every non-Rust front end. |
+| `crates/doki-jni` | JNI bridge exposing `doki-api` to Java with Java-supplied save folders. |
+| `android/bridge` | Java side of the bridge (`dev.doki.bridge`); `tools/jni-desktop-test.sh` runs it on a desktop JVM. |
 | `tools/f01-saf-probe` | Android folder-access probe for F01. |
 
 ## Rules

@@ -6,6 +6,8 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rustfmt.toml'
+      - 'android/bridge/**'
+      - 'tools/jni-desktop-test.sh'
       - '.github/workflows/rust.yml'
   push:
     branches: [main]
@@ -36,3 +38,6 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Test
         run: cargo test --workspace --locked
+      - name: JNI bridge on a desktop JVM
+        if: runner.os == 'Linux'
+        run: tools/jni-desktop-test.sh

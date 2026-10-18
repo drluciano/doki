@@ -127,7 +127,7 @@ Review re-verifies the incoming checkpoint's stored bytes. If the playable files
 | A1 Recheck: head and playable bytes equal the review; else capture the change and return `LocalChangedSinceReview` | – | no | Nothing changed. |
 | A2 Backup: playable files equal head; head's objects re-verify; else `BackupUnverified` | – | no | Nothing changed. |
 | A3 Journal `Prepared`: op id, target, backup, previous head, intended choice | journal | no | Next operation discards the staging and journal automatically. |
-| A4 Stage every differing file in `<folder>/.doki-staging/<op>/`, verify staged bytes | staging | no | As A3. |
+| A4 Stage every differing file in the adapter's staging area (`<folder>/.doki-staging/<op>/` locally, `.doki-<op>-<name>` siblings on Android), verify staged bytes | staging | no | As A3. |
 | A5 Journal `Installing` | journal | no | Recovery (6.1). |
 | A6 Replace/create each differing file (staged rename), then remove files the target lacks | – | **yes** | Recovery (6.1). Game marked "Needs recovery"; capture and other installs refused. |
 | A7 Journal `Committing`; re-read folder, must equal target exactly | journal | no | Recovery (6.1). |
@@ -135,11 +135,11 @@ Review re-verifies the incoming checkpoint's stored bytes. If the playable files
 
 An I/O error before A5 cleans up and reports the cause; nothing changed. An I/O error from A5 on returns `InstallInterrupted` and leaves the journal. Head never moves before A7 verifies.
 
-The local-folder adapter requires per-file atomic replacement (`per_file_atomic_replace = Supported`) and refuses to install otherwise (`StrategyUnsupported`). A multi-file bundle can be mixed between A6 steps; the journal makes that state identifiable and recoverable.
+Each adapter reports how it replaces a file (`ReplaceMode`): `Atomic` (rename over), `DeleteThenRename` (remove the old file, then move the verified staged copy into place) or `Unknown`. Installs are refused with `StrategyUnsupported` unless the mode can never leave a partially written file; both known modes qualify. Under `DeleteThenRename` an interruption can leave a file missing between the two steps; recovery classifies it as `missing`, and both the target and the backup copy are in the vault, so Finish and Put back restore it. A multi-file bundle can be mixed between A6 steps; the journal makes that state identifiable and recoverable.
 
 ### 6.1 Recovery after an interrupted install
 
-1. Classify every path: matches **target**, matches **backup**, or **other** (something else wrote, e.g. the emulator was opened).
+1. Classify every path: matches **target**, matches **backup**, **missing**, or **other** (something else wrote, e.g. the emulator was opened).
 2. If the folder already equals the journal's target, commit (A8), whatever the user picked.
 3. If any path is **other**, capture the whole folder as a `backup` checkpoint first, so nothing is lost.
 4. **Finish**: make the folder equal the target, verify, commit. **Put back**: make the folder equal the backup (or empty, if it was empty), verify, restore the previous head.
@@ -171,9 +171,9 @@ Doki never infers "more progress" from size, time or hash. A compatibility-matri
 
 | Concern | Desktop local folder (`LocalDir`) | Android Storage Access Framework |
 |---|---|---|
-| Missing folder | `SourceUnavailable` | Not tested |
-| Per-file atomic replace | Staged file renamed over the target on the same volume (`MoveFileExW` with replace on Windows, `rename(2)` on POSIX). Not established for network shares or FAT removable media. | Unknown; many providers lack rename-over. Adapter must report Unknown until F01 measures it. |
-| Truncating overwrite | Not used | Known hazard: some providers ignore `"wt"`; must be measured |
+| Missing folder | `SourceUnavailable` | Adapter throws `FileNotFoundException`, mapped to `SourceUnavailable`; revoked access throws `SecurityException`, mapped to `PermissionLost`. Not yet measured on hardware. |
+| Per-file atomic replace | Staged file renamed over the target on the same volume (`MoveFileExW` with replace on Windows, `rename(2)` on POSIX). Not established for network shares or FAT removable media. | No rename-over. Adapter uses `DeleteThenRename` (delete the target, then `renameDocument` the verified staged sibling) only when the provider advertises delete, rename and create; otherwise `Unknown` and installs are refused. Behaviour on real providers is not yet measured (F01). |
+| Truncating overwrite | Not used | Not used: staged copies are always new documents, never overwritten in place |
 | Multi-file atomicity | Not provided; journaled | Not provided; journaled |
 | Durability | `fsync` of files and, on POSIX, directories | Not tested |
 | Links | Refused (could escape the granted folder) | n/a |
@@ -222,10 +222,12 @@ No platform claim is made beyond this table. Supported emulators are listed only
 |---|---|---|
 | Model, paths, ids, ancestry, errors | `crates/doki-core` | unit tests per module |
 | Vault (objects, checkpoints, records, locks) | `crates/doki-vault` | `src/tests.rs` |
-| Save-folder adapter and fault injection | `crates/doki-platform` | `local.rs` tests |
+| Save-folder adapter and fault injection | `crates/doki-platform` | `local.rs` tests; engine `split_replace` recovery tests |
+| JSON command interface | `crates/doki-api` | `src/tests.rs`, including tampered reviews |
+| Java bridge (JNI) | `crates/doki-jni`, `android/bridge` | `tools/jni-desktop-test.sh`: restore through both replace modes, refusal on unknown mode, missing folder |
 | Capture, review, install, recovery, packages | `crates/doki-engine` | `src/tests.rs`: crash at every install step with Finish and Put back, I/O failure at every folder write, crash during recovery, rescue of files written mid-recovery, tampered and truncated packages |
 | Relay server | `crates/doki-relay` | auth, listing, expiry, size limits |
 | Relay client, pairing, encryption | `crates/doki-sync` | wrong key, tampering, relay stores only ciphertext, two-device handoff |
 | Command line | `crates/doki-cli` | `tests/handoff.rs`: the end-to-end milestone, by file and by relay |
 
-Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter, per-device relay keys, and checkpoint cleanup (C06).
+Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter on real hardware, per-device relay keys, and checkpoint cleanup (C06).

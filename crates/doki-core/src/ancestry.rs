@@ -15,7 +15,8 @@ pub trait Graph {
 }
 
 /// Relation of an incoming checkpoint to the local one.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case", tag = "kind")]
 pub enum Relation {
     /// The same checkpoint.
     Same,

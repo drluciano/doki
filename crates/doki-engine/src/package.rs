@@ -64,7 +64,7 @@ struct ObjectRef {
 }
 
 /// What an import added.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize)]
 pub struct ImportSummary {
     pub from_device: String,
     pub checkpoints_added: usize,

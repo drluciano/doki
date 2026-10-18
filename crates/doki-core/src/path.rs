@@ -19,6 +19,10 @@ const WINDOWS_RESERVED: &[&str] = &[
 /// Directory name Doki reserves inside save folders for staging installs.
 pub const RESERVED_DIR: &str = ".doki-staging";
 
+/// Prefix of every name Doki may create inside a save folder (staging
+/// folders, staged sibling files). Such names are never part of a bundle.
+pub const RESERVED_PREFIX: &str = ".doki-";
+
 /// A relative path of a file inside a bundle root.
 ///
 /// Normalized to Unicode NFC with `/` separators so the same file has the same
@@ -47,7 +51,7 @@ impl BundlePath {
             if segment.is_empty() || segment == "." || segment == ".." {
                 return bad("empty, '.' or '..' segment");
             }
-            if segment == RESERVED_DIR {
+            if segment.starts_with(RESERVED_PREFIX) {
                 return bad("reserved by Doki");
             }
             if segment.chars().any(|c| c.is_control() || "<>:\"|?*".contains(c)) {

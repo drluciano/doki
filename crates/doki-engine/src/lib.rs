@@ -63,7 +63,8 @@ impl LocationProvider for LocalProvider {
 pub type CrashHook = Box<dyn Fn(&str)>;
 
 /// Result of [`Engine::capture`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case", tag = "outcome", content = "checkpoint")]
 pub enum CaptureOutcome {
     Created(CheckpointId),
     /// The playable files equal the current head; nothing new was stored.
@@ -79,7 +80,7 @@ impl CaptureOutcome {
 }
 
 /// One checkpoint as shown in a bundle's history.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct HistoryEntry {
     pub id: CheckpointId,
     pub checkpoint: Checkpoint,

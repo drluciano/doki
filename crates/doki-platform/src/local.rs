@@ -5,10 +5,10 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 use doki_core::error::StorageSide::SaveLocation as Side;
-use doki_core::path::RESERVED_DIR;
+use doki_core::path::{RESERVED_DIR, RESERVED_PREFIX};
 use doki_core::{BundlePath, Error, Result};
 
-use crate::{Capabilities, SaveLocation, Support};
+use crate::{Capabilities, ReplaceMode, SaveLocation, Support};
 
 /// A save folder on a local filesystem.
 ///
@@ -52,8 +52,8 @@ impl LocalDir {
             let name = name.to_str().ok_or_else(|| {
                 Error::InvalidInput(format!("file name is not valid Unicode: {name:?}"))
             })?;
-            if prefix.is_empty() && name == RESERVED_DIR {
-                continue;
+            if name.starts_with(RESERVED_PREFIX) {
+                continue; // Doki's own staging, never part of the save
             }
             let rel = if prefix.is_empty() { name.to_owned() } else { format!("{prefix}/{name}") };
             let kind = entry.file_type().map_err(|e| Error::io("reading file type", Side, e))?;
@@ -90,10 +90,7 @@ impl SaveLocation for LocalDir {
     }
 
     fn capabilities(&self) -> Capabilities {
-        Capabilities {
-            per_file_atomic_replace: Support::Supported,
-            durable_flush: Support::Supported,
-        }
+        Capabilities { replace: ReplaceMode::Atomic, durable_flush: Support::Supported }
     }
 
     fn check_available(&self) -> Result<()> {

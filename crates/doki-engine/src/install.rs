@@ -25,7 +25,7 @@ use doki_core::{
     relate, BundleId, BundlePath, CaptureMode, Checkpoint, CheckpointId, CheckpointKind, Error,
     FileEntry, FilesDigest, Relation, Result, CHECKPOINT_SCHEMA_VERSION,
 };
-use doki_platform::{SaveLocation, Support};
+use doki_platform::SaveLocation;
 use doki_vault::{now_rfc3339, random_hex};
 
 use crate::records::{
@@ -35,7 +35,7 @@ use crate::records::{
 use crate::{by_path, Engine, LocationProvider, Review};
 
 /// Result of a completed [`Engine::use_checkpoint`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct UseOutcome {
     /// The checkpoint whose files are now playable.
     pub installed: CheckpointId,
@@ -50,17 +50,21 @@ pub struct UseOutcome {
 }
 
 /// State of one path after an interruption.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FileState {
     /// Matches what was being installed.
     Target,
     /// Matches the backup taken before the install.
     Backup,
+    /// Absent, but expected by both the target and the backup: a replace
+    /// was interrupted between removing the old file and placing the new.
+    Missing,
     /// Matches neither, e.g. the emulator wrote during the install.
     Other,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct RecoveryStatus {
     pub journal: Journal,
     pub files: Vec<(BundlePath, FileState)>,
@@ -76,7 +80,8 @@ pub enum RecoveryAction {
     PutBack,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case", tag = "outcome")]
 pub enum RecoveryOutcome {
     /// The install stopped before touching playable files.
     NothingChanged,
@@ -101,7 +106,7 @@ impl<P: LocationProvider> Engine<P> {
             return Err(Error::LocalChangedSinceReview { new_checkpoint: None });
         }
         location.check_available()?;
-        if location.capabilities().per_file_atomic_replace != Support::Supported {
+        if !location.capabilities().replace.never_truncates() {
             return Err(Error::StrategyUnsupported(
                 "this save location cannot replace files without risk of truncation".into(),
             ));
@@ -344,6 +349,8 @@ impl<P: LocationProvider> Engine<P> {
                     FileState::Target
                 } else if now == hash_of(&b, p) {
                     FileState::Backup
+                } else if now.is_none() {
+                    FileState::Missing
                 } else {
                     FileState::Other
                 };

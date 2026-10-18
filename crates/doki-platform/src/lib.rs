@@ -29,11 +29,33 @@ pub enum Support {
     Unknown,
 }
 
+/// How [`SaveLocation::commit_staged`] replaces an existing file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReplaceMode {
+    /// One step: readers see the old file or the new one (rename over).
+    Atomic,
+    /// Remove the old file, then move the verified staged copy into place.
+    /// An interruption can leave the file missing, never partially written;
+    /// the install journal and the vault copy of both versions recover it.
+    /// Used where the storage cannot rename over an existing file, such as
+    /// many Android document providers.
+    DeleteThenRename,
+    /// Not established. Doki refuses to install into this location.
+    Unknown,
+}
+
+impl ReplaceMode {
+    /// Whether an interrupted replace can never leave a partially written file.
+    pub fn never_truncates(self) -> bool {
+        matches!(self, ReplaceMode::Atomic | ReplaceMode::DeleteThenRename)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Capabilities {
-    /// Replacing one file either leaves the old bytes or the new bytes,
-    /// never a truncated mix. Required for installs in this release.
-    pub per_file_atomic_replace: Support,
+    /// How existing files are replaced. Installs require a mode that never
+    /// leaves a partially written file.
+    pub replace: ReplaceMode,
     /// Written data can be flushed to stable storage before the call returns.
     pub durable_flush: Support,
 }

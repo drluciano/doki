@@ -416,6 +416,7 @@ fn run(cli: Cli) -> Result<(), Error> {
                     let s = match state {
                         FileState::Target => "new save",
                         FileState::Backup => "previous save",
+                        FileState::Missing => "missing (will be put back from the vault)",
                         FileState::Other => "changed by something else (will be kept in history)",
                     };
                     println!("  {path}: {s}");

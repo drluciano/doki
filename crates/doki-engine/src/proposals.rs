@@ -11,8 +11,9 @@ use crate::{CaptureOutcome, Engine, LocationProvider};
 
 /// Everything the user needs to decide, and the exact state the decision is
 /// bound to (I7). [`Engine::use_checkpoint`] refuses to act if the head or
-/// the playable files no longer match `baseline_*`.
-#[derive(Debug, Clone)]
+/// the playable files no longer match `baseline_*`, so a review passed back
+/// in from a client cannot bypass the recheck.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Review {
     pub bundle_id: BundleId,
     pub incoming: CheckpointId,
@@ -42,7 +43,7 @@ impl Review {
 }
 
 /// A row in the Incoming list.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ReviewItem {
     pub proposal: Proposal,
     pub checkpoint: Checkpoint,

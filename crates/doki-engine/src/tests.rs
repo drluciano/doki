@@ -30,6 +30,67 @@ impl LocationProvider for FaultProvider {
     }
 }
 
+/// A location that replaces files by deleting then renaming, like Android
+/// document providers without rename-over. Each half is a separate
+/// fault-injectable write.
+struct SplitReplace<L>(L);
+
+impl<L: SaveLocation> SaveLocation for SplitReplace<L> {
+    fn describe(&self) -> String {
+        self.0.describe()
+    }
+    fn capabilities(&self) -> doki_platform::Capabilities {
+        doki_platform::Capabilities {
+            replace: doki_platform::ReplaceMode::DeleteThenRename,
+            ..self.0.capabilities()
+        }
+    }
+    fn check_available(&self) -> doki_core::Result<()> {
+        self.0.check_available()
+    }
+    fn list(&self) -> doki_core::Result<Vec<doki_core::BundlePath>> {
+        self.0.list()
+    }
+    fn open(&self, p: &doki_core::BundlePath) -> doki_core::Result<Box<dyn std::io::Read + '_>> {
+        self.0.open(p)
+    }
+    fn stage(
+        &self,
+        op: &str,
+        p: &doki_core::BundlePath,
+        d: &mut dyn std::io::Read,
+    ) -> doki_core::Result<()> {
+        self.0.stage(op, p, d)
+    }
+    fn open_staged(
+        &self,
+        op: &str,
+        p: &doki_core::BundlePath,
+    ) -> doki_core::Result<Box<dyn std::io::Read + '_>> {
+        self.0.open_staged(op, p)
+    }
+    fn commit_staged(&self, op: &str, p: &doki_core::BundlePath) -> doki_core::Result<()> {
+        self.0.remove(p)?;
+        self.0.commit_staged(op, p)
+    }
+    fn remove(&self, p: &doki_core::BundlePath) -> doki_core::Result<()> {
+        self.0.remove(p)
+    }
+    fn discard_staging(&self, op: &str) -> doki_core::Result<()> {
+        self.0.discard_staging(op)
+    }
+}
+
+struct SplitProvider {
+    plan: Rc<FaultPlan>,
+}
+
+impl LocationProvider for SplitProvider {
+    fn open<'a>(&'a self, location: &str) -> Box<dyn SaveLocation + 'a> {
+        Box::new(SplitReplace(FaultyLocation::new(LocalDir::new(location), self.plan.clone())))
+    }
+}
+
 struct Device {
     _vault_dir: TempDir,
     save_dir: TempDir,
@@ -709,4 +770,77 @@ fn clean_leftovers_never_removes_checkpoint_content() {
         d.engine.vault().verify_checkpoint_objects(&e.checkpoint).unwrap();
     }
     assert_eq!(d.save(), incoming);
+}
+
+#[test]
+fn delete_then_rename_storage_is_recoverable_at_every_write() {
+    // Same divergent install on storage that cannot rename over a file.
+    let setup = || {
+        let (d, review, local, incoming, local_tip, incoming_tip) = divergent_setup();
+        let Device { _vault_dir, save_dir, engine, plan, bundle } = d;
+        let vault = Vault::open(engine.vault().root()).unwrap();
+        drop(engine);
+        let engine = Engine::with_provider(vault, SplitProvider { plan: plan.clone() });
+        (
+            _vault_dir,
+            save_dir,
+            engine,
+            plan,
+            bundle,
+            review,
+            local,
+            incoming,
+            local_tip,
+            incoming_tip,
+        )
+    };
+    let (_v, _s, engine, plan, _b, review, ..) = setup();
+    let before = plan.calls();
+    engine.use_checkpoint(&review).unwrap();
+    let writes = plan.calls() - before;
+
+    for action in [RecoveryAction::Finish, RecoveryAction::PutBack] {
+        for n in 0..writes {
+            let (
+                _v,
+                save_dir,
+                engine,
+                plan,
+                bundle,
+                review,
+                local,
+                incoming,
+                local_tip,
+                incoming_tip,
+            ) = setup();
+            plan.fail_from(plan.calls() + n);
+            let result = engine.use_checkpoint(&review);
+            plan.disarm();
+            let read = || read_save(save_dir.path());
+            match result {
+                Ok(_) => assert_eq!(read(), incoming),
+                Err(e) if e.playable_files_may_be_mixed() => {
+                    let status = engine.recovery_status(&bundle).unwrap().unwrap();
+                    assert!(
+                        status.files.iter().all(|(_, s)| *s != FileState::Other),
+                        "a half-done replace is Missing, never Other: {:?}",
+                        status.files
+                    );
+                    match engine.recover(&bundle, action).unwrap() {
+                        RecoveryOutcome::Finished { .. } => assert_eq!(read(), incoming),
+                        RecoveryOutcome::PutBack { head } => {
+                            assert_eq!(read(), local);
+                            assert_eq!(head, Some(local_tip.clone()));
+                        }
+                        RecoveryOutcome::NothingChanged => assert_eq!(read(), local),
+                    }
+                }
+                Err(_) => assert_eq!(read(), local),
+            }
+            let history: Vec<_> =
+                engine.history(&bundle).unwrap().into_iter().map(|e| e.id).collect();
+            assert!(history.contains(&local_tip) && history.contains(&incoming_tip));
+            assert!(engine.journal(&bundle).unwrap().is_none());
+        }
+    }
 }

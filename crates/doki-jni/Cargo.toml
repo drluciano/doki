@@ -1,0 +1,17 @@
+[package]
+name = "doki-jni"
+description = "JNI bridge exposing the Doki engine to Android (and desktop JVM tests)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+doki-core.workspace = true
+doki-engine.workspace = true
+doki-platform.workspace = true
+doki-api.workspace = true
+jni.workspace = true
