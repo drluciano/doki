@@ -10,7 +10,7 @@ There is no published release yet. Test builds are made automatically for every 
 
 1. Open the [App workflow runs](https://github.com/drluciano/doki/actions/workflows/app.yml) and pick the latest run with a green check on `main`.
 2. Under **Artifacts**, download:
-   - **doki-windows** for Windows. Unzip it and run `doki.exe`.
+   - **doki-windows-setup** for Windows. Unzip it and run `doki-setup-….exe`. It installs just for you, with no administrator prompt, and adds Doki to the Start menu. The installer is not signed yet, so Windows may show "Windows protected your PC": choose **More info**, then **Run anyway**.
    - **doki-android** for Android. Unzip it and install the APK. Your device will ask you to allow installing apps from this source.
 
 > **Updating on Android:** for now, a newer APK cannot be installed over an older one, and uninstalling deletes Doki's checkpoints on that device. Read [Updating Doki](Updating-Doki.md) before you update.

@@ -91,7 +91,7 @@ Not built yet: the practice tutorial with sample saves, QR codes, and encrypted 
 
 ### The app
 
-1. Download a test build from the latest successful [App workflow run](https://github.com/drluciano/doki/actions/workflows/app.yml): `doki-windows` (a folder with `doki.exe`) or `doki-android` (a debug-signed APK). These are test builds, not releases.
+1. Download a test build from the latest successful [App workflow run](https://github.com/drluciano/doki/actions/workflows/app.yml): `doki-windows-setup` (a Windows installer) or `doki-android` (a debug-signed APK). These are test builds, not releases.
 2. Name the device, then **Library → Add game** and choose the game's save folder, or choose **Whole system** for an emulator's whole save folder. Connecting a folder changes nothing.
 3. Play. Once the save settles, Doki makes a checkpoint on its own. Keep Doki running in the background (Android) or the tray (Windows).
 4. Under **Devices**, choose **Show a code on this device**, and enter the code on your other device.

@@ -10,6 +10,7 @@ on:
       - 'tools/app-test.sh'
       - 'tools/build-android-engine.sh'
       - 'tools/check-apk-bridge.sh'
+      - 'tools/check-windows-installer.ps1'
       - '.github/workflows/app.yml'
   push:
     branches: [main]
@@ -56,6 +57,35 @@ jobs:
       - name: Build desktop app
         working-directory: app
         run: flutter build ${{ runner.os == 'Windows' && 'windows' || 'linux' }} --release
+      - name: Bundle the Visual C++ runtime
+        # Doki and its engine need the Visual C++ runtime, which a fresh
+        # Windows install may lack; ship it next to doki.exe (app-local
+        # deployment) instead of asking users to install it.
+        if: runner.os == 'Windows'
+        run: |
+          vs=$(cygpath -u "$("/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe" -latest -property installationPath)")
+          crt=$(ls -d "$vs"/VC/Redist/MSVC/*/x64/Microsoft.VC14*.CRT | sort -V | tail -1)
+          echo "Using $crt"
+          cp "$crt"/msvcp140.dll "$crt"/vcruntime140.dll "$crt"/vcruntime140_1.dll app/build/windows/x64/runner/Release/
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        run: |
+          choco upgrade innosetup -y --no-progress
+          version=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' app/pubspec.yaml)
+          "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" "//DAppVersion=$version" app/windows/installer/doki.iss
+          ls -l app/build/windows/installer
+      - name: Check the installer (install, update over a running Doki, uninstall)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: tools/check-windows-installer.ps1 (Get-Item app/build/windows/installer/doki-setup-*.exe).FullName
+      - name: Upload Windows installer (test build, unsigned)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: doki-windows-setup
+          path: app/build/windows/installer/doki-setup-*.exe
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload Windows app (test build)
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

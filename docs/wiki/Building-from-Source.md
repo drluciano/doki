@@ -27,6 +27,8 @@ tools/app-test.sh                  # format, analyze, widget tests and real-engi
 cd app && flutter run -d windows   # or -d linux; this also compiles the engine
 ```
 
+The Windows installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) 6.3 or newer from `app/windows/installer/doki.iss`, after `flutter build windows --release`: `iscc /DAppVersion=0.1.0 app\windows\installer\doki.iss` writes `app/build/windows/installer/doki-setup-0.1.0.exe`. CI also copies the Visual C++ runtime DLLs next to `doki.exe` first, so the app runs on PCs without it; `tools/check-windows-installer.ps1` installs, updates and uninstalls the result to check it. The app icon and wizard images are drawn by `app/windows/installer/make_art.py`.
+
 ## Android app
 
 Needs the Android SDK and NDK, the Rust Android targets and `cargo-ndk`:
@@ -42,7 +44,7 @@ The Java bridge can be tested without a device: `tools/jni-desktop-test.sh`.
 
 ## Test builds from CI
 
-`.github/workflows/app.yml` runs the app tests on Linux and Windows and uploads two artifacts on every run: `doki-windows` and `doki-android` (debug-signed APK). They are test builds, not releases.
+`.github/workflows/app.yml` runs the app tests on Linux and Windows and uploads these artifacts on every run: `doki-windows-setup` (the installer, unsigned), `doki-windows` (the same app as a plain folder) and `doki-android` (debug-signed APK). They are test builds, not releases.
 
 ## Contributing
 

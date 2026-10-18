@@ -172,6 +172,7 @@ bool FlutterWindow::OnCreate() {
 
   taskbar_created_message_ = RegisterWindowMessageW(L"TaskbarCreated");
   show_message_ = RegisterWindowMessageW(kShowDokiMessage);
+  quit_message_ = RegisterWindowMessageW(kQuitDokiMessage);
   keep_in_tray_ = ReadKeepInTray();
   if (keep_in_tray_) {
     AddTrayIcon();
@@ -337,6 +338,10 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
   if (message == show_message_ && show_message_ != 0) {
     Open();
+    return 0;
+  }
+  if (message == quit_message_ && quit_message_ != 0) {
+    Quit();
     return 0;
   }
   if (message == taskbar_created_message_ && taskbar_created_message_ != 0) {
