@@ -64,7 +64,7 @@ const helpTopics = [
     'Checkpoints happen on their own',
     'Doki saves a copy of your progress after you play.',
     [
-      'Doki checks each save folder every few seconds. Once a save has stayed the same for 30 seconds, it saves a checkpoint.',
+      'Doki checks each save folder every 15 seconds. Once a save has stayed the same for 30 seconds, it saves a checkpoint.',
       'Library shows "New progress, checkpoint coming soon" while it waits.',
       'To save one right away, close the game in the emulator, open it in Library and choose Checkpoint now. You can add a label, such as "Before the gym".',
       'On Android Doki keeps checking in the background. On Windows it keeps checking from the tray.',

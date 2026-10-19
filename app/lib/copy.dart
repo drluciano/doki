@@ -48,7 +48,7 @@ ErrorCopy errorCopy(String code) => switch (code) {
   ),
   'StrategyUnsupported' => const ErrorCopy(
     'This folder cannot be updated safely',
-    'Doki will not replace files here. Copy the save out from History instead.',
+    'Doki will not replace files here. Your checkpoints stay safe in History.',
   ),
   'InstallInterrupted' || 'RecoveryRequired' => const ErrorCopy(
     'Finish or undo the last change',
@@ -56,7 +56,7 @@ ErrorCopy errorCopy(String code) => switch (code) {
   ),
   'RecoveryFailed' => const ErrorCopy(
     'Recovery could not finish',
-    'The game stays protected. Try again, or copy a checkpoint out from History.',
+    'The game stays protected and your checkpoints are safe in History. Try again.',
   ),
   'Busy' => const ErrorCopy('Doki is busy with this game', 'Wait a moment and try again.'),
   'NotFound' => const ErrorCopy('Not found', 'Refresh and try again.'),
