@@ -31,7 +31,6 @@ If you changed the app, also run `tools/app-test.sh` (format, analyze, widget te
 | `crates/doki-ffi` | C ABI over `doki-api` for the desktop app (Dart FFI). |
 | `app` | Flutter app; `tools/app-test.sh` runs its checks. See [docs/app.md](docs/app.md). |
 | `android/bridge` | Java side of the bridge (`dev.doki.bridge`); `tools/jni-desktop-test.sh` runs it on a desktop JVM. |
-| `tools/f01-saf-probe` | Android folder-access probe for F01. |
 
 ## Rules
 
