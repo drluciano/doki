@@ -24,7 +24,7 @@ Doki can only watch while it is running:
 |---|---|
 | Android | A background watcher keeps checking and syncing while you play in an emulator, with a notification showing. Turn it off under **Devices → Keep working in the background**, or from the notification. With it off, Doki only works while it is open. |
 | Windows | Closing or minimizing Doki hides it in the tray (the notification area), where it keeps checking and syncing. Click the icon to open it, or right-click for **Sync now** and **Quit**. Turn this off under **Devices → Keep Doki in the tray**; then closing Doki quits it. **Start Doki with Windows** opens it in the tray when you sign in. |
-| Linux | Doki watches while it is open (minimized is fine). |
+| Linux | Closing Doki hides it in the tray, where it keeps checking and syncing; click the icon to open it, or use its menu for **Sync now** and **Quit**. Turn this off under **Devices → Keep Doki in the tray**. **Start Doki when you sign in** opens it in the tray when you sign in to the desktop. Without a tray, including SteamOS Game Mode, Doki works only while it is open; see [Installing on Linux](Installing-on-Linux.md#running-in-the-background). |
 
 ## Turn it off for a game
 

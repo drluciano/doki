@@ -12,6 +12,7 @@ There is no published release yet. Test builds are made automatically for every 
 2. Under **Artifacts**, download:
    - **doki-windows-setup** for Windows. Unzip it and run `doki-setup-….exe`. It installs just for you, with no administrator prompt, and adds Doki to the Start menu. The installer is not signed yet, so Windows may show "Windows protected your PC": choose **More info**, then **Run anyway**.
    - **doki-android** for Android. Unzip it and install the APK. Your device will ask you to allow installing apps from this source.
+   - **doki-linux-x86_64** (Steam Deck, PCs) or **doki-linux-aarch64** (ARM handhelds such as the Odin 3 on Armada) for Linux. It is a Flatpak; see [Installing on Linux](Installing-on-Linux.md).
 
 > **Updating on Android:** for now, a newer APK cannot be installed over an older one, and uninstalling deletes Doki's checkpoints on that device. Read [Updating Doki](Updating-Doki.md) before you update.
 
@@ -39,7 +40,7 @@ Play many games in one emulator? Choose **Whole system** instead and pick the em
 
 Doki makes checkpoints on its own. After you play, once the save has stopped changing for 30 seconds, it saves a verified copy. Library shows **New progress, checkpoint coming soon** while it waits, then **Protected by a checkpoint**. See [Automatic checkpoints](Automatic-Checkpoints.md).
 
-Keep Doki running while you play: on Android it keeps working in the background (with a notification), and on Windows it keeps working from the tray when you close its window.
+Keep Doki running while you play: on Android it keeps working in the background (with a notification), and on Windows and Linux it keeps working from the tray when you close its window. In SteamOS Game Mode there is no tray; see [Installing on Linux](Installing-on-Linux.md#steamos-and-armada-game-mode).
 
 To make one right away, close the game in the emulator, open it in Doki and choose **Checkpoint now**. Doki copies every file, checks each one, and shows **Checkpoint created. Verified copy kept.** If nothing changed since the last checkpoint, it tells you instead of making a duplicate.
 

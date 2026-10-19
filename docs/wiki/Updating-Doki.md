@@ -10,6 +10,10 @@ If you used the older unzipped `doki-windows` folder, quit Doki from its tray ic
 
 Use **Settings → Apps → Installed apps → Doki → Uninstall**. This removes the program, its shortcuts and its sign-in entry. It leaves your game saves and Doki's data folder alone, so installing again later brings back your checkpoints and paired devices. To remove those too, delete `%APPDATA%\dev.doki\doki` after uninstalling.
 
+## Linux
+
+Install the newer Flatpak over the old one with `flatpak install --user doki-linux-….flatpak`. It updates in place and keeps your checkpoints, paired devices and settings, which live in `~/.var/app/dev.doki.doki`. Uninstalling with `flatpak uninstall --user dev.doki.doki` keeps them too, unless you add `--delete-data`. See [Installing on Linux](Installing-on-Linux.md#updating).
+
 ## Android
 
 > **Known issue ([#82](https://github.com/drluciano/doki/issues/82)):** each Android test build is signed with a different key, so Android refuses to install a new one over the old one ("App not installed as it conflicts with an existing package"). Until this is fixed, updating means **uninstalling first, which deletes Doki's data on that device**: its checkpoints, paired devices and settings.

@@ -2,6 +2,7 @@
 
 **Using Doki**
 - [Getting started](Getting-Started.md)
+- [Installing on Linux](Installing-on-Linux.md)
 - [Automatic checkpoints](Automatic-Checkpoints.md)
 - [Tracking a whole emulator](Tracking-a-Whole-Emulator.md)
 - [Game art](Game-Art.md)
