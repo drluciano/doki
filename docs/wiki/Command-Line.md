@@ -13,7 +13,7 @@ cargo build --release
 # the binary is target/release/doki
 ```
 
-Doki keeps its data in `%APPDATA%\Doki` on Windows and `~/.local/share/doki` elsewhere. Override it with `--vault <folder>` or `DOKI_VAULT`. Keep it outside every save folder.
+The command line keeps its data in `%APPDATA%\Doki` on Windows and `$XDG_DATA_HOME/doki` (normally `~/.local/share/doki`) elsewhere. Override it with `--vault <folder>` or `DOKI_VAULT`. Keep it outside every save folder. The app keeps its own data separately, so checkpoints made with the command line do not appear in the app on the same device unless you point `--vault` at the app's folder.
 
 ## Everyday use
 

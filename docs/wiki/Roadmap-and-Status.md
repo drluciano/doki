@@ -42,4 +42,4 @@ Until these are verified, treat Android installs as experimental and keep copies
 | Linux | Development only. |
 | macOS, iOS | Not planned for the first release. |
 
-Open decisions and the defaults used meanwhile are in [open-questions.md](https://github.com/drluciano/doki/blob/main/docs/spec/open-questions.md). Work is tracked in [issues](https://github.com/drluciano/doki/issues) and the [project board](https://github.com/users/drluciano/projects/2).
+Work is tracked in [issues](https://github.com/drluciano/doki/issues), grouped by milestone.

@@ -20,7 +20,7 @@ flowchart TB
     API --> SYNC["doki-sync<br/>relay client"]
     PEER --> ENGINE
     SYNC --> ENGINE
-    SYNC -. HTTPS .-> RELAY["doki-relay<br/>(self-hosted)"]
+    SYNC -. HTTP(S) .-> RELAY["doki-relay<br/>(self-hosted)"]
     ENGINE --> VAULT["doki-vault<br/>content-addressed store"]
     ENGINE --> PLATFORM["doki-platform<br/>save-folder adapters"]
     VAULT --> CORE["doki-core<br/>model · ancestry · errors"]
@@ -48,4 +48,4 @@ flowchart TB
 - **Journaled install.** Recheck, verified backup, journal, stage, replace, verify, commit. An interruption at any step has a defined outcome and a recovery path. Each adapter states how it replaces a file (rename-over on desktop, delete-then-rename on Android) and installs are refused when that is unknown.
 - **Honest errors.** Every error code says whether the save may have changed.
 
-Read the [safety contract](https://github.com/drluciano/doki/blob/main/docs/spec/safety-contract.md) for states, steps and interruption outcomes, and the [engineering plan](https://github.com/drluciano/doki/blob/main/docs/engineering.md) for background.
+Read the [safety contract](https://github.com/drluciano/doki/blob/main/docs/spec/safety-contract.md) for states, steps and interruption outcomes, and the [engineering overview](https://github.com/drluciano/doki/blob/main/docs/engineering.md) for background.

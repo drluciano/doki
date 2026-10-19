@@ -32,7 +32,7 @@ Choosing one version never deletes the other. It stays in History as *Separate p
 
 ## Interruptions are recoverable
 
-Every replacement is written to a journal step by step. If it stops halfway, Doki knows exactly which files are old and which are new, blocks the game, and asks you to **Finish the change** or **Put my save back**. See [Recovering an interrupted change](Recovering-an-Interrupted-Change.md).
+Doki records each step of a replacement as it goes. If it stops halfway, Doki knows exactly which files are old and which are new, blocks the game, and asks you to **Finish the change** or **Put my save back**. See [Recovering an interrupted change](Recovering-an-Interrupted-Change.md).
 
 Every step of this process is tested by simulating a crash at that exact point.
 

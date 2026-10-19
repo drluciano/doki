@@ -10,7 +10,7 @@ No. Synced progress waits in **Incoming**. Your save changes only when you choos
 No. Save files are binary and merging them would corrupt them. When you played on two devices, you choose one whole version and the other is kept in History.
 
 ### Which emulators are supported?
-Doki works with any emulator that keeps a game's save as files in a folder. No emulator is listed as supported yet, because Doki only lists one after a full restore has been tested on a real device. The first one being tested is Eden on an AYN Odin 3 (Android 15).
+Doki works with any emulator that keeps a game's save as files in a folder. No emulator is listed as supported yet, because Doki only lists one after a full restore has been tested on a real device. Testing starts with Eden on an AYN Odin 3 (Android 15).
 
 ### Do I have to make checkpoints myself?
 No. Doki makes one on its own once a save has stopped changing for 30 seconds. See [Automatic checkpoints](Automatic-Checkpoints.md).

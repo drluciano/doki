@@ -37,9 +37,7 @@ Close the game in the emulator before you choose this.
 
 ### Keep alongside
 
-Files the incoming progress in History and stops asking about it. Nothing changes. You can restore it later from History.
-
-Because this does not record a decision, a device may offer the same progress again later.
+Keeps the incoming progress in History and removes it from Incoming. Nothing changes, and you can restore it later from History. Because no decision is recorded, the other device may offer it again later.
 
 ### Keep my save
 

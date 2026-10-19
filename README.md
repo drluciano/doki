@@ -18,7 +18,7 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
-Doki is a save handoff tool for emulators. Play on your PC, pick up on your handheld, and come back again. Every save you hand off is kept as a **checkpoint** in a version history, and progress from another device **never replaces your current save until you choose it**.
+Doki is a save handoff tool for emulators. Play on your PC, pick up on your handheld, and come back again. Each version of your save is kept as a **checkpoint** in a history you can go back to, and progress from another device **never replaces your current save until you choose it**.
 
 Syncing a save and using it are separate actions. When progress arrives from another device it waits in **Incoming**, where you can review it and then **use it**, **keep it alongside** your own, or **keep your save**. If you played on both devices, Doki tells you, and both versions stay in your history whichever you pick.
 
@@ -111,10 +111,11 @@ cargo build --release
 
 # Pair with your other device and sync directly
 ./target/release/doki devices invite        # on this device
-./target/release/doki devices join CODE     # on the other device
+./target/release/doki devices join CODE     # on the other device, after doki init there
 ./target/release/doki devices sync
 
 # On the device that received progress
+./target/release/doki add "Pokémon Emerald" <save folder> --link <id>   # first time only; doki incoming prints this command
 ./target/release/doki incoming
 ./target/release/doki use "Pokémon Emerald" <checkpoint>
 ```
@@ -145,8 +146,8 @@ Full instructions are in [docs/app.md](docs/app.md) and on the [Building from so
 | [Command line](docs/cli.md) | Every `doki` command and exit code |
 | [Device-to-device sync](docs/peer.md) | Pairing codes, trust, and how direct sync works |
 | [Relay](docs/relay.md) | Running the optional self-hosted relay and its security model |
-| [Open questions](docs/spec/open-questions.md) | Defaults chosen where a decision is still open |
-| [Engineering plan](docs/engineering.md) and [design](docs/design.md) | Architecture and product design |
+| [Engineering overview](docs/engineering.md) | Modules, safety rules, testing and platform support |
+| [Design](docs/design.md) | Wording, look, motion and accessibility of the app |
 
 The wiki pages live in [`docs/wiki`](docs/wiki) and are published to the GitHub wiki when they change on `main`.
 

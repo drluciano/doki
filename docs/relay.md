@@ -40,7 +40,7 @@ doki sync                                       # on any device, any time
 
 - The pairing code holds a random secret. HKDF-SHA256 derives an access token (the relay stores only its SHA-256) and a separate content key that never leaves your devices.
 - Packages are sealed with XChaCha20-Poly1305 before upload, with the space id as associated data. The relay sees only sizes and upload times. Altered or foreign packages fail to open and are skipped.
-- All paired devices share one secret. To shut out a lost device, create a new space with `doki relay forget` and `doki relay create` on a remaining device, then re-join the others. Per-device keys, revocation and key recovery are the S01 design (#25) and are required before an internet-facing release.
+- All paired devices share one secret. To shut out a lost device, create a new space with `doki relay forget` and `doki relay create` on a remaining device, then re-join the others. Per-device keys, revocation and key recovery are required before the relay is recommended for use over the internet.
 
 ## API
 

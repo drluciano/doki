@@ -16,7 +16,7 @@ Doki uses a few plain words for its ideas. The command line and the app use the 
 | **Keep checkpoints for** | How long this device keeps checkpoints: forever (the default) or a set time. |
 | **Use this save** | Replace your current save with incoming progress, after a verified backup. |
 | **Restore a checkpoint** | Replace your current save with a checkpoint from History, after a verified backup. |
-| **Keep alongside** | Put incoming progress in History without using it, and stop asking about it. |
+| **Keep alongside** | Keep incoming progress in History without using it, and remove it from Incoming. The other device may offer it again later. |
 | **Keep my save** | Keep your current save and record that choice, so no device asks again. (`doki dismiss` on the command line.) |
 | **Separate progress** | A version you set aside, or one nobody continued from. Still in History, still restorable. |
 | **You played on both devices** | Both devices continued from the same checkpoint in different directions. You choose which to continue; both are kept. |

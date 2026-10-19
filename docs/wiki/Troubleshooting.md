@@ -15,9 +15,9 @@ Every Doki error says what happened, **whether your save changed**, and what to 
 | A received copy is damaged | `IntegrityFailed` | No | Sync again. If it keeps happening, report it. |
 | You played since reviewing | `LocalChangedSinceReview` | No | Your newer progress was kept as a checkpoint. Review again. |
 | Could not confirm a backup | `BackupUnverified` | No | Nothing was replaced. Try again in a moment. |
-| This folder cannot be updated safely | `StrategyUnsupported` | No | The storage cannot replace files without risk, so Doki will not. Copy the save out instead. |
+| This folder cannot be updated safely | `StrategyUnsupported` | No | The storage cannot replace files without risk, so Doki will not. Copy a checkpoint's files out with the command line (`doki export-files`) and put them in place yourself. |
 | Finish or undo the last change | `InstallInterrupted`, `RecoveryRequired` | **Maybe** | Open the game and choose Finish or Put back. See [Recovering an interrupted change](Recovering-an-Interrupted-Change.md). |
-| Recovery could not finish | `RecoveryFailed` | **Maybe** | The game stays protected. Fix the cause and try again, or copy a checkpoint out. |
+| Recovery could not finish | `RecoveryFailed` | **Maybe** | The game stays protected. Fix the cause and try again. You can also copy any checkpoint's files out with the command line (`doki export-files`). |
 | Doki is busy with this game | `Busy` | No | Another action on this game is running. Wait a moment and try again. |
 | Made by a newer Doki | `UnsupportedVersion` | No | Update Doki on this device. |
 | Not found / That did not look right | `NotFound`, `InvalidInput` | No | Refresh, or check what you entered. |
@@ -30,7 +30,7 @@ Every Doki error says what happened, **whether your save changed**, and what to 
 
 **The short code finds nothing (Looking for the other device…).** Both devices must be on the same network, and the network must allow local broadcasts. Guest, hotel and some mesh networks block them. Use the long code instead.
 
-**"Could not reach the other device" / "None of your devices could be reached."** Open Doki on the other device and keep it in the foreground, then choose **Sync now**. Android only syncs while Doki is open.
+**"Could not reach the other device" / "None of your devices could be reached."** Make sure Doki is running on the other device (open, in the Windows tray, or with **Keep working in the background** on for Android), then choose **Sync now**.
 
 **Progress arrived but nothing changed.** That is expected. Look under **Incoming** and review it. See [Reviewing incoming progress](Reviewing-Incoming-Progress.md).
 
