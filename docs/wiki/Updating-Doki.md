@@ -2,7 +2,13 @@
 
 ## Windows
 
-Download the newer `doki-windows` test build, quit Doki (right-click the tray icon and choose **Quit**), and replace the old folder with the new one. Your checkpoints and settings are kept, because they live in Doki's own data folder, not next to `doki.exe`.
+Download the newer `doki-windows-setup` test build and run it. Setup sees the installed Doki, quits it if it is running, and updates it in place. Your checkpoints, paired devices and settings are kept, because they live in Doki's own data folder (`%APPDATA%\dev.doki\doki`), not next to `doki.exe`.
+
+If you used the older unzipped `doki-windows` folder, quit Doki from its tray icon, run the installer, and delete the old folder afterwards. Your data carries over.
+
+### Uninstalling
+
+Use **Settings → Apps → Installed apps → Doki → Uninstall**. This removes the program, its shortcuts and its sign-in entry. It leaves your game saves and Doki's data folder alone, so installing again later brings back your checkpoints and paired devices. To remove those too, delete `%APPDATA%\dev.doki\doki` after uninstalling.
 
 ## Android
 

@@ -18,6 +18,11 @@
 // Registered by name in main.cpp and here.
 constexpr const wchar_t kShowDokiMessage[] = L"DokiShowWindow";
 
+// Message the installer and uninstaller post to quit Doki before replacing or
+// removing its files (app/windows/installer/doki.iss registers the same name).
+// It does the same as Quit in the tray menu.
+constexpr const wchar_t kQuitDokiMessage[] = L"DokiQuit";
+
 // A window that hosts a Flutter view and, while "keep in tray" is on, a
 // notification-area icon. Closing or minimizing then hides the window to the
 // tray, so automatic checkpoints and sync keep running; Quit in the tray
@@ -71,6 +76,7 @@ class FlutterWindow : public Win32Window {
   NOTIFYICONDATAW tray_icon_ = {};
   UINT taskbar_created_message_ = 0;
   UINT show_message_ = 0;
+  UINT quit_message_ = 0;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_
