@@ -17,10 +17,15 @@ first="$(flatpak info --user --show-commit "$app")"
 echo "ok - installs (commit $first)"
 
 # Every library Doki loads resolves inside the GNOME runtime, including the
-# engine, which Dart opens only when the app starts.
+# engine, which Dart opens only when the app starts. libdartjni.so is skipped:
+# the jni package bundles it on every platform, but only Android opens it
+# (it needs a Java VM).
 missing="$(flatpak run --command=sh "$app" -c '
   loader=$(ls /lib*/ld-linux*.so* /usr/lib/*/ld-linux*.so* 2>/dev/null | head -n1)
-  for f in /app/doki/doki /app/doki/lib/*.so; do "$loader" --list "$f"; done' | grep 'not found' || true)"
+  for f in /app/doki/doki /app/doki/lib/*.so; do
+    [ "${f##*/}" = libdartjni.so ] && continue
+    "$loader" --list "$f" 2>&1
+  done' | grep -E 'not found|error while loading' || true)"
 [ -z "$missing" ] || fail "libraries missing from the runtime: $missing"
 echo "ok - every library resolves in the runtime"
 
