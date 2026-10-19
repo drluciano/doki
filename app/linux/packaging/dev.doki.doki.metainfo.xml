@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.doki.doki</id>
+  <name>Doki</name>
+  <summary>Hand your game saves between devices</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <developer id="dev.doki">
+    <name>Doki</name>
+  </developer>
+  <description>
+    <p>
+      Doki keeps a history of your emulator saves and hands them between your
+      devices. Another device's save never replaces yours on its own: it waits
+      in Incoming until you choose to use it, keep it alongside, or keep yours.
+    </p>
+    <p>
+      Checkpoints happen on their own while Doki runs, in a window or in the
+      tray, and every replacement first makes a verified backup.
+    </p>
+  </description>
+  <launchable type="desktop-id">dev.doki.doki.desktop</launchable>
+  <url type="homepage">https://github.com/drluciano/doki</url>
+  <url type="help">https://github.com/drluciano/doki/wiki</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-19">
+      <description>
+        <p>First Linux test build.</p>
+      </description>
+    </release>
+  </releases>
+</component>

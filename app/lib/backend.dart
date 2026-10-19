@@ -48,23 +48,23 @@ abstract class DokiBackend {
   Future<PickedFolder?> pickFolder();
 
   /// Whether save folders are watched while the app is closed, or null
-  /// where that is not available (Linux). On Android this is the background
-  /// service; on Windows it is "keep in tray": closing or minimizing hides
-  /// Doki to the notification area instead of quitting.
+  /// where that is not available. On Android this is the background
+  /// service; on Windows and Linux it is "keep in tray": closing (and on
+  /// Windows minimizing) hides Doki to the tray instead of quitting.
   Future<bool?> backgroundWatching();
 
   Future<void> setBackgroundWatching(bool on);
 
   /// Whether Doki starts (in the tray) when the user signs in, or null where
-  /// the app does not manage that (everywhere but Windows).
+  /// the app does not manage that (Android).
   Future<bool?> startWithSystem();
 
   Future<void> setStartWithSystem(bool on);
 
   /// Show a system notification. [key] identifies what it is about (a game
   /// id), so a newer notification about the same thing replaces the older
-  /// one. Android posts a notification, Windows shows it from the tray
-  /// icon; elsewhere, or with notifications blocked, nothing is shown.
+  /// one. Android and Linux post a notification, Windows shows it from the
+  /// tray icon; with notifications blocked, nothing is shown.
   Future<void> notify(String key, String title, String body);
 
   static Future<DokiBackend> forPlatform() async {
@@ -205,12 +205,15 @@ class FfiBackend implements DokiBackend {
     return PickedFolder(path, name);
   }
 
-  // The Windows runner keeps Doki in the tray (windows/runner/flutter_window.h).
-  // Linux has no tray yet, so Doki watches only while its window is open.
+  // The Windows and Linux runners keep Doki in the tray
+  // (windows/runner/flutter_window.cpp, linux/runner/my_application.cc) and
+  // answer the same calls.
   static const _window = MethodChannel('dev.doki/window');
 
+  static bool get _hasRunner => Platform.isWindows || Platform.isLinux;
+
   Future<bool?> _windowSetting(String name) async {
-    if (!Platform.isWindows) return null;
+    if (!_hasRunner) return null;
     try {
       return await _window.invokeMethod<bool>('get$name');
     } on MissingPluginException {
@@ -219,11 +222,11 @@ class FfiBackend implements DokiBackend {
   }
 
   Future<void> _setWindowSetting(String name, bool on) async {
-    if (!Platform.isWindows) return;
+    if (!_hasRunner) return;
     try {
       await _window.invokeMethod<void>('set$name', {'enabled': on});
     } on PlatformException catch (e) {
-      throw DokiError(e.code, e.message ?? 'Windows did not save the setting');
+      throw DokiError(e.code, e.message ?? 'The system did not save the setting');
     }
   }
 
@@ -241,11 +244,11 @@ class FfiBackend implements DokiBackend {
 
   @override
   Future<void> notify(String key, String title, String body) async {
-    if (!Platform.isWindows) return;
+    if (!_hasRunner) return;
     try {
       await _window.invokeMethod<void>('notify', {'key': key, 'title': title, 'body': body});
     } on MissingPluginException {
-      // Running without the Windows runner (tests).
+      // Running without the desktop runner (tests).
     }
   }
 }

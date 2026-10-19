@@ -1,0 +1,58 @@
+# Flatpak manifest for Doki on Linux (SteamOS, Armada and other desktops).
+#
+# Flutter cannot build inside flatpak-builder's offline sandbox, so CI first
+# builds the app with `flutter build linux --release` and copies the bundle to
+# app/build/flatpak-bundle; this manifest packages that bundle. The CI job
+# `linux` in .github/workflows/app.yml runs it for x86_64 and aarch64, and
+# docs/wiki/Installing-on-Linux.md explains the permissions below.
+app-id: dev.doki.doki
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+command: doki
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Device-to-device sync (iroh) and finding nearby devices (UDP broadcast).
+  - --share=network
+  # Save folders. Emulators keep saves anywhere under the home folder or on
+  # an SD card or other drive, and Doki replaces files in place there (rename
+  # over, with a verified backup), which the document portal cannot do
+  # reliably, so the folders are granted directly.
+  - --filesystem=home
+  # Saves of emulators installed as Flatpaks (RetroArch, Dolphin and others,
+  # including EmuDeck's), which `home` leaves out.
+  - --filesystem=~/.var/app
+  # SD cards and other drives (SteamOS mounts them under /run/media).
+  - --filesystem=/run/media
+  - --filesystem=/media
+  - --filesystem=/mnt
+  # The tray icon (linux/runner/tray.cc).
+  - --talk-name=org.kde.StatusNotifierWatcher
+modules:
+  - name: doki
+    buildsystem: simple
+    sources:
+      - type: dir
+        path: ../../build/flatpak-bundle
+        dest: bundle
+      - type: dir
+        path: icons
+        dest: icons
+      - type: file
+        path: dev.doki.doki.desktop
+      - type: file
+        path: dev.doki.doki.metainfo.xml
+    build-commands:
+      - cp -a bundle /app/doki
+      - mkdir -p /app/bin
+      - ln -s /app/doki/doki /app/bin/doki
+      - install -Dm644 dev.doki.doki.desktop /app/share/applications/dev.doki.doki.desktop
+      - install -Dm644 dev.doki.doki.metainfo.xml /app/share/metainfo/dev.doki.doki.metainfo.xml
+      - |
+        for size in 32 48 64 128 256 512; do
+          install -Dm644 "icons/${size}x${size}/dev.doki.doki.png" \
+            "/app/share/icons/hicolor/${size}x${size}/apps/dev.doki.doki.png"
+        done

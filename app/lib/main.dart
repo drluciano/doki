@@ -25,8 +25,9 @@ Future<void> main() async {
   final backend = await DokiBackend.forPlatform();
   final art = await ArtStore.open();
   final state = AppState(backend, autoSync: true, autoCapture: true, art: art)..refresh();
-  if (Platform.isWindows) {
-    // "Sync now" in the tray menu (windows/runner/flutter_window.cpp).
+  if (Platform.isWindows || Platform.isLinux) {
+    // "Sync now" in the tray menu (windows/runner/flutter_window.cpp,
+    // linux/runner/tray.cc).
     const MethodChannel('dev.doki/window').setMethodCallHandler((call) async {
       if (call.method == 'sync') await state.sync().catchError((_) => null);
     });

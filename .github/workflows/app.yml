@@ -11,6 +11,9 @@ on:
       - 'tools/build-android-engine.sh'
       - 'tools/check-apk-bridge.sh'
       - 'tools/check-windows-installer.ps1'
+      - 'tools/build-flatpak.sh'
+      - 'tools/check-flatpak.sh'
+      - 'tools/check-linux-desktop.*'
       - '.github/workflows/app.yml'
   push:
     branches: [main]
@@ -92,6 +95,62 @@ jobs:
         with:
           name: doki-windows
           path: app/build/windows/x64/runner/Release/
+          if-no-files-found: error
+          retention-days: 14
+
+  linux:
+    # The Flatpak, for x86_64 (Steam Deck, PCs) and aarch64 (ARM handhelds
+    # such as the Odin 3 on Armada), each built natively on its own runner.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+            flutter_arch: x64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            flutter_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Install build and check tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ninja-build libgtk-3-dev clang cmake pkg-config \
+            flatpak flatpak-builder xvfb xauth dbus python3-gi python3-xlib
+          # flatpak-builder sandboxes each build step with bubblewrap, which
+          # needs unprivileged user namespaces.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      - name: Install Flutter
+        # Flutter publishes SDK archives for x64 Linux only; on arm64 the SDK
+        # is checked out at the same version and fetches arm64 tools itself.
+        run: |
+          if [ "${{ matrix.arch }}" = x86_64 ]; then
+            curl -sSfL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" | tar xJ -C "$RUNNER_TEMP"
+          else
+            git clone --quiet --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          fi
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Build Linux app
+        working-directory: app
+        run: flutter build linux --release
+      - name: Check the tray, closing to the tray and one Doki at a time
+        run: tools/check-linux-desktop.sh app/build/linux/${{ matrix.flutter_arch }}/release/bundle/doki
+      - name: Build the Flatpak
+        run: tools/build-flatpak.sh
+      - name: Check the Flatpak (libraries, start, update in place keeps data)
+        run: tools/check-flatpak.sh app/build/doki-linux-${{ matrix.arch }}.flatpak
+      - name: Upload Flatpak (test build)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: doki-linux-${{ matrix.arch }}
+          path: app/build/doki-linux-${{ matrix.arch }}.flatpak
           if-no-files-found: error
           retention-days: 14
 
