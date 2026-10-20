@@ -119,13 +119,15 @@ class _DevicesScreenState extends State<DevicesScreen> {
                       value: state.backgroundWatching!,
                       onChanged: (on) => guarded(context, () => state.setBackgroundWatching(on)),
                       title: Text(
-                        Platform.isWindows
-                            ? 'Keep Doki in the tray'
-                            : 'Keep working in the background',
+                        Platform.isAndroid
+                            ? 'Keep working in the background'
+                            : 'Keep Doki in the tray',
                       ),
                       subtitle: Text(
                         Platform.isWindows
                             ? 'Closing or minimizing Doki hides it in the tray, where it keeps saving checkpoints and syncing. Turn off to quit when you close it.'
+                            : Platform.isLinux
+                            ? 'Closing Doki hides it in the tray, where it keeps saving checkpoints and syncing. Without a tray (SteamOS Game Mode), closing quits. Turn off to quit when you close it.'
                             : 'Saves checkpoints and syncs while you play, with a notification showing. Turn off to only work while Doki is open.',
                       ),
                     ),
@@ -136,9 +138,15 @@ class _DevicesScreenState extends State<DevicesScreen> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       value: state.startWithSystem!,
                       onChanged: (on) => guarded(context, () => state.setStartWithSystem(on)),
-                      title: const Text('Start Doki with Windows'),
-                      subtitle: const Text(
-                        'Opens in the tray when you sign in, so checkpoints and sync never wait for you to open it.',
+                      title: Text(
+                        Platform.isWindows
+                            ? 'Start Doki with Windows'
+                            : 'Start Doki when you sign in',
+                      ),
+                      subtitle: Text(
+                        Platform.isLinux
+                            ? 'Opens in the tray when you sign in to the desktop, so checkpoints and sync never wait for you to open it. SteamOS Game Mode does not start it.'
+                            : 'Opens in the tray when you sign in, so checkpoints and sync never wait for you to open it.',
                       ),
                     ),
                   ),
@@ -536,6 +544,8 @@ class _Notifications extends StatelessWidget {
                 ? 'Shown from the Doki icon in the tray, so they need "Keep Doki in the tray" on.'
                 : Platform.isAndroid
                 ? 'Android may ask you to allow notifications for Doki.'
+                : Platform.isLinux
+                ? 'Shown by your desktop while Doki is running, in a window or in the tray.'
                 : 'This platform does not show notifications yet.',
             style: text.bodySmall?.copyWith(color: DokiColors.muted, fontSize: 14),
           ),

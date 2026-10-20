@@ -33,7 +33,7 @@ The app syncs:
 - when it comes back to the foreground,
 - and when you choose **Sync now**.
 
-Both devices need Doki running at the same time. On Android, the background watcher keeps syncing while you play (turn it off under **Devices → Keep working in the background**). On Windows, Doki keeps syncing from the tray after you close its window, until you choose **Quit**.
+Both devices need Doki running at the same time. On Android, the background watcher keeps syncing while you play (turn it off under **Devices → Keep working in the background**). On Windows and Linux, Doki keeps syncing from the tray after you close its window, until you choose **Quit**.
 
 Games added on one device appear on the others under **On your other devices** in Library (and whole emulators under **Systems on your other devices**). Tap one and choose where it saves on this device.
 
@@ -50,7 +50,7 @@ Open **Devices**, choose the remove button next to the device, and confirm with 
 
 ## Limits
 
-- On Android, syncing in the background needs **Keep working in the background** on. On Linux, Doki syncs only while it is open.
+- On Android, syncing in the background needs **Keep working in the background** on. On Linux, Doki syncs while it is open or in the tray; in SteamOS Game Mode only while it is open.
 - The short code needs a network that allows local broadcasts. Some guest and public Wi-Fi networks block them; use the long code there.
 - Syncing on a network with no internet connection at all has not been tested yet.
 - QR codes are not shown yet.

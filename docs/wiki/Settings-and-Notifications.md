@@ -23,14 +23,16 @@ A newer notification about the same game replaces the older one.
 
 - **Android**: allow notifications for Doki when asked.
 - **Windows**: notifications come from the Doki icon in the tray, so **Keep Doki in the tray** must be on.
+- **Linux**: your desktop shows them while Doki is running, in a window or in the tray.
 
 ## Running in the background
 
 | Setting (under Devices) | Platform | What it does |
 |---|---|---|
 | **Keep working in the background** | Android | Saves checkpoints and syncs while you play, with a notification showing. Off: Doki only works while open. |
-| **Keep Doki in the tray** | Windows | Closing or minimizing hides Doki in the tray, where it keeps working. Off: closing quits. |
+| **Keep Doki in the tray** | Windows, Linux | Closing (and on Windows minimizing) hides Doki in the tray, where it keeps working. Off: closing quits. On Linux, closing also quits when the desktop shows no tray. |
 | **Start Doki with Windows** | Windows | Opens Doki in the tray when you sign in. |
+| **Start Doki when you sign in** | Linux | Opens Doki in the tray when you sign in to the desktop (not in SteamOS Game Mode). |
 
 Opening Doki while it is already in the tray brings back the running copy. See [Automatic checkpoints](Automatic-Checkpoints.md).
 

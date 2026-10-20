@@ -240,4 +240,4 @@ No platform claim is made beyond this table. Supported emulators are listed only
 | Relay client, pairing, encryption | `crates/doki-sync` | wrong key, tampering, relay stores only ciphertext, two-device handoff |
 | Command line | `crates/doki-cli` | `tests/handoff.rs`: the end-to-end milestone, by file and by relay |
 
-Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter on real hardware, peer sync between real Android and Windows devices, and per-device relay keys. Deleting and retention are covered by engine tests (files removed, records kept, ancestry intact across a handoff).
+Not yet covered: disk-full and permission-loss injection on the vault side, the Android adapter on real hardware, peer sync between real Android and Windows devices, the Linux Flatpak on real hardware (it uses `LocalDir` on host folders bind-mounted into the sandbox, not the document portal, so the desktop column applies; SD cards formatted exFAT or FAT fall under its removable-media limit), and per-device relay keys. Deleting and retention are covered by engine tests (files removed, records kept, ancestry intact across a handoff).

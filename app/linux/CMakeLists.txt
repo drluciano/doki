@@ -115,6 +115,11 @@ install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
 install(FILES "${DOKI_ENGINE_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
+# The tray icon (runner/tray.cc), drawn by packaging/make_icons.py.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/64x64/dev.doki.doki.png"
+  DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" RENAME "doki-tray.png"
+  COMPONENT Runtime)
+
 foreach(bundled_library ${PLUGIN_BUNDLED_LIBRARIES})
   install(FILES "${bundled_library}"
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

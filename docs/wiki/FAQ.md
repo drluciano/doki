@@ -22,7 +22,7 @@ Yes. Doki asks you to confirm the game is closed so the save is complete. If fil
 Nothing bad. Doki uses each save's history, not clocks, to decide how saves relate. Times are shown only to help you.
 
 ### Do both devices need to be on at the same time?
-For direct sync, yes, with Doki running on both (in the background on Android, or in the tray on Windows). If that rarely happens, use a [relay](Self-Hosted-Relay.md) or a handoff file.
+For direct sync, yes, with Doki running on both (in the background on Android, or in the tray on Windows and Linux). If that rarely happens, use a [relay](Self-Hosted-Relay.md) or a handoff file.
 
 ### Does Doki work in the background?
 Yes. On Android, **Keep working in the background** (on by default) keeps saving checkpoints and syncing, with a notification showing. On Windows, Doki keeps working from the tray after you close its window, and can start with Windows. See [Settings and notifications](Settings-and-Notifications.md).
@@ -43,4 +43,7 @@ Yes. Under **Settings**, pick a theme (Follow system, Light, Dark or OLED) and t
 Remove it under **Devices** on any other device. The removal spreads to all of them, and the lost device can no longer sync with yours.
 
 ### Is it on iOS or macOS?
-Not today. Android and Windows are the first targets.
+Not today. Android and Windows are the first targets, with Linux test builds as a Flatpak.
+
+### Does it work on a Steam Deck or an Odin 3?
+There are Linux test builds for both: x86_64 for the Steam Deck and aarch64 for ARM handhelds such as the Odin 3 on Armada. In Desktop Mode Doki keeps working from the tray; Game Mode has no tray, so there it works only while it is open. See [Installing on Linux](Installing-on-Linux.md). Neither has been tested with a real save yet.

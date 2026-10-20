@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Doki
+GenericName=Save handoff
+Comment=Hand your game saves between devices, with checkpoints you can go back to
+Exec=doki
+Icon=dev.doki.doki
+Terminal=false
+Categories=Utility;
+Keywords=save;saves;emulator;sync;checkpoint;backup;
+StartupNotify=true
+StartupWMClass=dev.doki.doki
+SingleMainWindow=true

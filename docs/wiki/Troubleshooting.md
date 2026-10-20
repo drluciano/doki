@@ -48,6 +48,10 @@ Every Doki error says what happened, **whether your save changed**, and what to 
 
 **No notifications on Windows.** They come from the tray icon, so **Keep Doki in the tray** must be on.
 
+**No tray icon on Linux.** Plain GNOME needs the AppIndicator extension to show tray icons; KDE (SteamOS and Armada desktop mode) shows them out of the box. Without a tray, closing Doki quits it. SteamOS Game Mode never shows a tray.
+
+**Linux: Doki cannot open a save folder.** The Flatpak can reach your home folder, other Flatpak emulators' data (`~/.var/app`) and drives under `/run/media`, `/media` and `/mnt`. A save folder elsewhere needs `flatpak override --user --filesystem=/that/folder dev.doki.doki`, then restart Doki.
+
 ## Android folders
 
 - Choose the folder that holds the game's save files, not the emulator's whole data folder.

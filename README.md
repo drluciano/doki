@@ -8,7 +8,7 @@
   <a href="https://github.com/drluciano/doki/actions/workflows/rust.yml"><img alt="Engine CI" src="https://github.com/drluciano/doki/actions/workflows/rust.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/drluciano/doki/actions/workflows/app.yml"><img alt="App CI" src="https://github.com/drluciano/doki/actions/workflows/app.yml/badge.svg?branch=main"></a>
   <img alt="Status: pre-release" src="https://img.shields.io/badge/status-pre--release-orange">
-  <img alt="Platforms: Android, Windows" src="https://img.shields.io/badge/platforms-Android%20%7C%20Windows-7a55a8">
+  <img alt="Platforms: Android, Windows, Linux (experimental)" src="https://img.shields.io/badge/platforms-Android%20%7C%20Windows%20%7C%20Linux-7a55a8">
 </p>
 
 <p align="center">
@@ -42,7 +42,7 @@ Syncing a save and using it are separate actions. When progress arrives from ano
 ## Features
 
 - **Checkpoints.** Each checkpoint is an exact, verified, unchangeable copy of a game's save files. If nothing changed since the last one, Doki says so instead of storing a duplicate.
-- **Automatic checkpoints.** Doki watches your save folders and makes a checkpoint once a save has stopped changing for 30 seconds. On Android it keeps working in the background; on Windows it lives in the tray and can start with Windows.
+- **Automatic checkpoints.** Doki watches your save folders and makes a checkpoint once a save has stopped changing for 30 seconds. On Android it keeps working in the background; on Windows and Linux it lives in the tray and can start when you sign in.
 - **Whole emulators.** Add an emulator's save folder once and every game in it is tracked on its own, including games you start later.
 - **Review before anything changes.** Received progress waits in Incoming. Doki compares it with your save and explains how they relate: newer than yours, older, from a different playthrough, or "you played on both devices".
 - **Back up, then replace.** **Use this save** and **Restore a checkpoint** first verify a backup of your current save, re-check that you have not played since the review, then install and verify the new files.
@@ -80,7 +80,7 @@ Doki is **pre-release**. The engine, command line, app, Android bridge and devic
 |---|---|
 | Windows | App and CLI build and pass tests in CI. Runs from the tray. Test builds available. |
 | Android | App builds in CI (arm64, x86_64) with a background watcher. The save-folder adapter uses Android's folder picker and is **experimental** until it is verified on real hardware. Updating currently needs an uninstall (see below). |
-| Linux | Used for development. App and CLI run; not a release target yet. |
+| Linux | Flatpak test builds for x86_64 (Steam Deck) and aarch64 (ARM handhelds such as the Odin 3 on Armada). Runs from the tray in desktop mode; SteamOS Game Mode only while open. **Experimental** until verified on a real device. |
 | macOS, iOS | Not supported. |
 
 > **Known issue:** each Android test build is signed with a different key, so a newer APK will not install over an older one, and uninstalling deletes Doki's checkpoints on that device ([#82](https://github.com/drluciano/doki/issues/82)). Sync with another device before updating; [Updating Doki](https://github.com/drluciano/doki/wiki/Updating-Doki) has the steps. Your emulator's own save files are not affected.
@@ -91,9 +91,9 @@ Not built yet: the practice tutorial with sample saves, QR codes, and encrypted 
 
 ### The app
 
-1. Download a test build from the latest successful [App workflow run](https://github.com/drluciano/doki/actions/workflows/app.yml): `doki-windows-setup` (a Windows installer) or `doki-android` (a debug-signed APK). These are test builds, not releases.
+1. Download a test build from the latest successful [App workflow run](https://github.com/drluciano/doki/actions/workflows/app.yml): `doki-windows-setup` (a Windows installer), `doki-android` (a debug-signed APK) or `doki-linux-x86_64` / `doki-linux-aarch64` (a Flatpak; see [Installing on Linux](https://github.com/drluciano/doki/wiki/Installing-on-Linux)). These are test builds, not releases.
 2. Name the device, then **Library → Add game** and choose the game's save folder, or choose **Whole system** for an emulator's whole save folder. Connecting a folder changes nothing.
-3. Play. Once the save settles, Doki makes a checkpoint on its own. Keep Doki running in the background (Android) or the tray (Windows).
+3. Play. Once the save settles, Doki makes a checkpoint on its own. Keep Doki running in the background (Android) or the tray (Windows, Linux).
 4. Under **Devices**, choose **Show a code on this device**, and enter the code on your other device.
 5. Progress from the other device appears in **Incoming**. Open it to review, then choose what to do.
 

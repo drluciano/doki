@@ -55,7 +55,7 @@ A platform or emulator is called supported only after a full capture, transfer, 
 |---|---|
 | Windows | Built and tested in CI; runs from the tray. |
 | Android | Built in CI. The folder adapter uses the Storage Access Framework and replaces files by delete-then-rename. Its behaviour on real hardware and emulator storage (permission persistence, removable storage, background limits) still has to be measured. |
-| Linux | Used for development. |
+| Linux | Flatpak (GNOME runtime) for x86_64 and aarch64, built and checked in CI; runs from a StatusNotifierItem tray (`app/linux/runner/tray.cc`) and starts at sign-in through the Background portal. Same rename-over replace as Windows. Not yet verified on a real device. |
 | macOS, iOS | Not supported. Would need their own adapter and storage research first. |
 
 ## Releases
