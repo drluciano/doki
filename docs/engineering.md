@@ -60,7 +60,7 @@ A platform or emulator is called supported only after a full capture, transfer, 
 
 ## Releases
 
-There are no published releases yet; CI produces test builds. Before a first release: a stable Android signing key so updates install in place ([#82](https://github.com/drluciano/doki/issues/82)), per-device relay keys, release notes with known limits, and a supported-platform list backed by device testing.
+Releases are drafted by `.github/workflows/release.yml`, which builds through the App workflow and attaches the Windows installer, the Android APK signed with Doki's release key ([#82](https://github.com/drluciano/doki/issues/82)), both Linux Flatpaks and SHA-256 checksums, with notes from [CHANGELOG.md](../CHANGELOG.md). The runbook is [release.md](release.md). Still open before a 1.0: per-device relay keys, a signed Windows installer, and a supported-platform list backed by device testing.
 
 ## Documentation
 

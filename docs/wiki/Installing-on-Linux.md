@@ -2,21 +2,21 @@
 
 Doki for Linux comes as a Flatpak, built for both kinds of handheld and PC:
 
-| Build | For |
+| File | For |
 |---|---|
-| `doki-linux-x86_64` | Steam Deck (SteamOS), most PCs and x86 handhelds |
-| `doki-linux-aarch64` | ARM handhelds such as the AYN Odin 3 running Armada, and other ARM Linux devices |
+| `doki-…-linux-x86_64.flatpak` | Steam Deck (SteamOS), most PCs and x86 handhelds |
+| `doki-…-linux-aarch64.flatpak` | ARM handhelds such as the AYN Odin 3 running Armada, and other ARM Linux devices |
 
-> Linux builds are test builds. They pass automated checks, but nobody has restored a save with them on a Steam Deck or an Odin 3 yet, so keep a copy of your saves the first time.
+> Linux builds are experimental. They pass automated checks, but nobody has restored a save with them on a Steam Deck or an Odin 3 yet, so keep a copy of your saves the first time.
 
 ## Install
 
-1. Open the [App workflow runs](https://github.com/drluciano/doki/actions/workflows/app.yml), pick the latest run with a green check on `main`, and download the build for your device under **Artifacts**. Unzip it to get `doki-linux-….flatpak`.
+1. Download the file for your device from the latest release under [Releases](https://github.com/drluciano/doki/releases). (Test builds of every change are under **Artifacts** in the [App workflow runs](https://github.com/drluciano/doki/actions/workflows/app.yml); unzip one to get `doki-linux-….flatpak`.)
 2. On SteamOS or Armada, switch to **Desktop Mode** (Steam menu → Power → Switch to Desktop).
 3. Open a terminal (Konsole) in the folder with the file and run:
 
    ```sh
-   flatpak install --user doki-linux-x86_64.flatpak     # or doki-linux-aarch64.flatpak
+   flatpak install --user doki-0.1.0-linux-x86_64.flatpak     # or …-linux-aarch64.flatpak
    ```
 
    Flatpak downloads the GNOME runtime Doki uses from Flathub the first time (a few hundred MB). On KDE you can also open the file with Discover instead of using the terminal.
@@ -59,10 +59,10 @@ Doki asks for whole folders rather than using the portal file picker for each sa
 
 ## Updating
 
-Download the newer build and install it the same way:
+Download the newer release and install it the same way:
 
 ```sh
-flatpak install --user doki-linux-x86_64.flatpak
+flatpak install --user doki-0.2.0-linux-x86_64.flatpak     # the newer version's file
 ```
 
 Flatpak replaces the installed Doki in place. Quit Doki from its tray icon first, or the running copy keeps going until you quit it. Your checkpoints, paired devices and settings are kept: they live in `~/.var/app/dev.doki.doki`, which installing never touches. Installing the very same build twice says it is already installed, which is harmless.
