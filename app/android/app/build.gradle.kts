@@ -37,11 +37,28 @@ android {
         }
     }
 
+    // Release builds are signed with Doki's own key when these are set (CI
+    // sets them from repository secrets; see docs/release.md). Every APK
+    // signed with the same key installs over the previous one and keeps the
+    // app's data. Without them, release builds fall back to the debug key so
+    // `flutter build apk` keeps working on any machine, but such an APK cannot
+    // update one signed with Doki's key, or the other way round.
+    val keystorePath = System.getenv("DOKI_ANDROID_KEYSTORE")
+    val releaseSigned = !keystorePath.isNullOrEmpty()
+    signingConfigs {
+        if (releaseSigned) {
+            create("release") {
+                storeFile = file(keystorePath!!)
+                storePassword = System.getenv("DOKI_ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("DOKI_ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("DOKI_ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (releaseSigned) "release" else "debug")
             // Keeps the bridge names the native engine calls (see the file).
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

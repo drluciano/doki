@@ -12,6 +12,7 @@ Doki is **pre-release**. This page says what works today, what is verified and h
 - The Flutter app on Windows and Linux, tested against the real engine; Android builds with the engine for arm64 and x86_64, and CI checks the release APK keeps the names the engine calls.
 - In the app: the Android background watcher, the Windows and Linux tray and start at sign-in, notifications, themes and border colors, game art from SteamGridDB or your own images, and in-app help.
 - The Android bridge, tested on a desktop JVM with both ways of replacing files.
+- Releases: the Windows installer, the Android APK signed with Doki's own key so updates install in place, and both Linux Flatpaks, with checksums, built and checked by CI ([how releases are made](https://github.com/drluciano/doki/blob/main/docs/release.md)).
 
 ## Not yet verified
 
@@ -28,11 +29,10 @@ Until these are verified, treat Android installs as experimental and keep copies
 - A preview of a folder's files before connecting it.
 - QR codes for pairing.
 - Finding devices on a local network with no internet (mDNS).
-- Updating the Android app in place: test builds need a stable signing key ([#82](https://github.com/drluciano/doki/issues/82)). Until then, see [Updating Doki](Updating-Doki.md).
 - Encrypted handoff files.
 - Per-device keys for the relay.
 - Emulator profiles and a compatibility list.
-- Published releases.
+- A signed Windows installer (Windows SmartScreen warns until then).
 
 ## Platforms
 
@@ -40,7 +40,7 @@ Until these are verified, treat Android installs as experimental and keep copies
 |---|---|
 | Android | First target. Experimental until verified on hardware. |
 | Windows | First target. |
-| Linux | Test builds as a Flatpak for x86_64 (Steam Deck) and aarch64 (Odin 3 on Armada), with the tray and start at sign-in. Not yet verified on a real device. |
+| Linux | A Flatpak for x86_64 (Steam Deck) and aarch64 (Odin 3 on Armada), with the tray and start at sign-in. Not yet verified on a real device. |
 | macOS, iOS | Not planned for the first release. |
 
 Work is tracked in [issues](https://github.com/drluciano/doki/issues), grouped by milestone.

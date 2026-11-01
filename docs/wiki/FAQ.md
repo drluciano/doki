@@ -43,7 +43,7 @@ Yes. Under **Settings**, pick a theme (Follow system, Light, Dark or OLED) and t
 Remove it under **Devices** on any other device. The removal spreads to all of them, and the lost device can no longer sync with yours.
 
 ### Is it on iOS or macOS?
-Not today. Android and Windows are the first targets, with Linux test builds as a Flatpak.
+Not today. Android and Windows are the first targets, with Linux builds as a Flatpak.
 
 ### Does it work on a Steam Deck or an Odin 3?
-There are Linux test builds for both: x86_64 for the Steam Deck and aarch64 for ARM handhelds such as the Odin 3 on Armada. In Desktop Mode Doki keeps working from the tray; Game Mode has no tray, so there it works only while it is open. See [Installing on Linux](Installing-on-Linux.md). Neither has been tested with a real save yet.
+There are Linux builds for both: x86_64 for the Steam Deck and aarch64 for ARM handhelds such as the Odin 3 on Armada. In Desktop Mode Doki keeps working from the tray; Game Mode has no tray, so there it works only while it is open. See [Installing on Linux](Installing-on-Linux.md). Neither has been tested with a real save yet.

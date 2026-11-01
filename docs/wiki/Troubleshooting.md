@@ -38,7 +38,7 @@ Every Doki error says what happened, **whether your save changed**, and what to 
 
 ## Updating
 
-**"App not installed as it conflicts with an existing package" on Android.** Each test build is currently signed with a different key ([#82](https://github.com/drluciano/doki/issues/82)), so Android will not install it over the old one. Uninstalling first works but deletes Doki's checkpoints on that device. Follow [Updating Doki](Updating-Doki.md) to keep them.
+**"App not installed as it conflicts with an existing package" on Android.** The installed Doki is a test build made before the first release, signed with a throwaway key ([#82](https://github.com/drluciano/doki/issues/82)), so Android will not install a release over it. Uninstalling first works but deletes Doki's checkpoints on that device. Follow [Updating Doki](Updating-Doki.md#moving-from-a-test-build-made-before-the-first-release) to keep them. Releases install over each other.
 
 ## Automatic checkpoints and the background
 

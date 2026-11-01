@@ -74,16 +74,16 @@ The rules behind this are written down in the [safety contract](docs/spec/safety
 
 ## Project status
 
-Doki is **pre-release**. The engine, command line, app, Android bridge and device pairing are built and tested in CI. Use copies of your saves until a release is published.
+Doki is **pre-release**. The engine, command line, app, Android bridge and device pairing are built and tested in CI. Releases are early previews: use copies of your saves.
 
 | Platform | Status |
 |---|---|
-| Windows | App and CLI build and pass tests in CI. Runs from the tray. Test builds available. |
-| Android | App builds in CI (arm64, x86_64) with a background watcher. The save-folder adapter uses Android's folder picker and is **experimental** until it is verified on real hardware. Updating currently needs an uninstall (see below). |
-| Linux | Flatpak test builds for x86_64 (Steam Deck) and aarch64 (ARM handhelds such as the Odin 3 on Armada). Runs from the tray in desktop mode; SteamOS Game Mode only while open. **Experimental** until verified on a real device. |
+| Windows | App and CLI build and pass tests in CI. Runs from the tray. Installer in each release (not code-signed yet). |
+| Android | App builds in CI (arm64, x86_64) with a background watcher. The save-folder adapter uses Android's folder picker and is **experimental** until it is verified on real hardware. Releases update in place. |
+| Linux | Flatpaks for x86_64 (Steam Deck) and aarch64 (ARM handhelds such as the Odin 3 on Armada). Runs from the tray in desktop mode; SteamOS Game Mode only while open. **Experimental** until verified on a real device. |
 | macOS, iOS | Not supported. |
 
-> **Known issue:** each Android test build is signed with a different key, so a newer APK will not install over an older one, and uninstalling deletes Doki's checkpoints on that device ([#82](https://github.com/drluciano/doki/issues/82)). Sync with another device before updating; [Updating Doki](https://github.com/drluciano/doki/wiki/Updating-Doki) has the steps. Your emulator's own save files are not affected.
+> **Android test builds made before the first release** were each signed with a throwaway key, so a release will not install over one of them, and uninstalling deletes Doki's checkpoints on that device ([#82](https://github.com/drluciano/doki/issues/82)). Sync with another device before you move to a release; [Updating Doki](https://github.com/drluciano/doki/wiki/Updating-Doki) has the steps. Your emulator's own save files are not affected. Releases install over each other.
 
 Not built yet: the practice tutorial with sample saves, QR codes, and encrypted handoff files. Doki makes no claim about a specific emulator until a full restore has been tested on a real device. See [Roadmap and status](https://github.com/drluciano/doki/wiki/Roadmap-and-Status) for details.
 
@@ -91,7 +91,7 @@ Not built yet: the practice tutorial with sample saves, QR codes, and encrypted 
 
 ### The app
 
-1. Download a test build from the latest successful [App workflow run](https://github.com/drluciano/doki/actions/workflows/app.yml): `doki-windows-setup` (a Windows installer), `doki-android` (a debug-signed APK) or `doki-linux-x86_64` / `doki-linux-aarch64` (a Flatpak; see [Installing on Linux](https://github.com/drluciano/doki/wiki/Installing-on-Linux)). These are test builds, not releases.
+1. Download the latest release from [Releases](https://github.com/drluciano/doki/releases): the Windows installer, the Android APK, or the Linux Flatpak for x86_64 or aarch64 (see [Installing on Linux](https://github.com/drluciano/doki/wiki/Installing-on-Linux)). Test builds of every change are in the [App workflow runs](https://github.com/drluciano/doki/actions/workflows/app.yml).
 2. Name the device, then **Library → Add game** and choose the game's save folder, or choose **Whole system** for an emulator's whole save folder. Connecting a folder changes nothing.
 3. Play. Once the save settles, Doki makes a checkpoint on its own. Keep Doki running in the background (Android) or the tray (Windows, Linux).
 4. Under **Devices**, choose **Show a code on this device**, and enter the code on your other device.
@@ -148,6 +148,8 @@ Full instructions are in [docs/app.md](docs/app.md) and on the [Building from so
 | [Relay](docs/relay.md) | Running the optional self-hosted relay and its security model |
 | [Engineering overview](docs/engineering.md) | Modules, safety rules, testing and platform support |
 | [Design](docs/design.md) | Wording, look, motion and accessibility of the app |
+| [Making a release](docs/release.md) | Versions, the changelog, the Android signing key and publishing a release |
+| [Changelog](CHANGELOG.md) | What changed in each release |
 
 The wiki pages live in [`docs/wiki`](docs/wiki) and are published to the GitHub wiki when they change on `main`.
 

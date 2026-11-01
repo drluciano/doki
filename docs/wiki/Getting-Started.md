@@ -6,15 +6,17 @@ This page takes you from nothing to a protected save in a few minutes. You need 
 
 ## 1. Install Doki
 
-There is no published release yet. Test builds are made automatically for every change:
+Download the latest release from [Releases](https://github.com/drluciano/doki/releases). Under **Assets**, pick the file for your device:
 
-1. Open the [App workflow runs](https://github.com/drluciano/doki/actions/workflows/app.yml) and pick the latest run with a green check on `main`.
-2. Under **Artifacts**, download:
-   - **doki-windows-setup** for Windows. Unzip it and run `doki-setup-….exe`. It installs just for you, with no administrator prompt, and adds Doki to the Start menu. The installer is not signed yet, so Windows may show "Windows protected your PC": choose **More info**, then **Run anyway**.
-   - **doki-android** for Android. Unzip it and install the APK. Your device will ask you to allow installing apps from this source.
-   - **doki-linux-x86_64** (Steam Deck, PCs) or **doki-linux-aarch64** (ARM handhelds such as the Odin 3 on Armada) for Linux. It is a Flatpak; see [Installing on Linux](Installing-on-Linux.md).
+- **`doki-…-windows-setup.exe`** for Windows. Run it. It installs just for you, with no administrator prompt, and adds Doki to the Start menu. The installer is not signed yet, so Windows may show "Windows protected your PC": choose **More info**, then **Run anyway**.
+- **`doki-…-android.apk`** for Android. Open it on the device to install it. Your device will ask you to allow installing apps from this source.
+- **`doki-…-linux-x86_64.flatpak`** (Steam Deck, PCs) or **`doki-…-linux-aarch64.flatpak`** (ARM handhelds such as the Odin 3 on Armada) for Linux. See [Installing on Linux](Installing-on-Linux.md).
 
-> **Updating on Android:** for now, a newer APK cannot be installed over an older one, and uninstalling deletes Doki's checkpoints on that device. Read [Updating Doki](Updating-Doki.md) before you update.
+`SHA256SUMS.txt` lists each file's checksum if you want to check a download.
+
+Want to try a change before it is released? Every change also makes test builds: open the [App workflow runs](https://github.com/drluciano/doki/actions/workflows/app.yml), pick the latest run with a green check on `main`, and download one under **Artifacts** (unzip it first).
+
+> **Updating on Android from a test build made before the first release:** those were signed with a throwaway key, so the first release needs one last uninstall, which deletes Doki's checkpoints on that device. Read [Updating Doki](Updating-Doki.md) first.
 
 Prefer the command line? See [Command line](Command-Line.md).
 

@@ -54,7 +54,7 @@ tools/build-android-engine.sh          # writes app/android/app/src/main/jniLibs
 cd app && flutter build apk
 ```
 
-CI (`.github/workflows/app.yml`) runs the tests on Linux and Windows and publishes test builds: `doki-windows-setup` (installer), `doki-windows` (folder with `doki.exe`), `doki-android` (debug-signed APK) and `doki-linux-x86_64` / `doki-linux-aarch64` (Flatpak bundles, built by `tools/build-flatpak.sh`; see the wiki page *Installing on Linux*). They are test builds, not releases.
+CI (`.github/workflows/app.yml`) runs the tests on Linux and Windows and publishes test builds: `doki-windows-setup` (installer), `doki-windows` (folder with `doki.exe`), `doki-android` (APK, signed with Doki's release key when the repository secrets have it, otherwise a throwaway debug key) and `doki-linux-x86_64` / `doki-linux-aarch64` (Flatpak bundles, built by `tools/build-flatpak.sh`; see the wiki page *Installing on Linux*). They are test builds, not releases; releases are built from the same workflow (see [release.md](release.md)).
 
 ## What is verified, and what is not
 
@@ -62,4 +62,4 @@ CI (`.github/workflows/app.yml`) runs the tests on Linux and Windows and publish
 - Not yet verified: the Storage Access Framework adapter on real hardware and with emulator storage providers, and device-to-device sync between an Android device and a PC (automated tests cover devices on one machine and on a local network). Until then, treat Android installs as experimental and keep copies of saves. The Linux Flatpak has not been run on a Steam Deck or an Odin 3, or against a real tray and Background portal; treat it as experimental too.
 - Verified in CI as well: the release APK keeps the bridge class and method names the engine calls (`tools/check-apk-bridge.sh`).
 - Not built yet: the practice-saves tutorial, a file preview before connecting a folder, QR codes and per-device relay keys.
-- Known limit: each CI build signs the APK with a new debug key, so a newer APK will not install over an older one and updating means uninstalling, which deletes the vault on that device (#82). Sync with another device first; the wiki page *Updating Doki* has the steps.
+- Android updates: APKs signed with Doki's release key install over each other and keep the vault, with a `versionCode` that grows with each commit (`tools/android-version-code.sh`). Builds made before the key existed used a new debug key each time (#82), so moving from one of them needs one last uninstall; the wiki page *Updating Doki* has the steps.

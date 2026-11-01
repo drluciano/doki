@@ -15,6 +15,7 @@ on:
       - 'tools/check-flatpak.sh'
       - 'tools/check-linux-desktop.*'
       - '.github/workflows/app.yml'
+      - 'tools/android-version-code.sh'
   push:
     branches: [main]
     paths:
@@ -22,6 +23,14 @@ on:
       - 'android/bridge/**'
       - 'crates/**'
   workflow_dispatch:
+  # The release workflow builds through this one, so a release is built and
+  # checked exactly like every test build.
+  workflow_call:
+    inputs:
+      release:
+        description: Building a release (the Android APK must be signed with Doki's key)
+        type: boolean
+        default: false
 permissions:
   contents: read
 env:
@@ -177,16 +186,51 @@ jobs:
       - name: Build engine library
         # cargo-ndk finds the runner's NDK through ANDROID_NDK_ROOT.
         run: tools/build-android-engine.sh
+      - name: Set up Doki's signing key
+        # Every APK signed with the same key installs over the previous one
+        # and keeps the app's data (#82). The key lives only in repository
+        # secrets; see docs/release.md. Without it, test builds fall back to
+        # the debug key, and a release refuses to build.
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          RELEASE: ${{ inputs.release && 'true' || 'false' }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            if [ "$RELEASE" = true ]; then
+              echo "::error::A release needs the ANDROID_KEYSTORE_BASE64 secret (see docs/release.md)"
+              exit 1
+            fi
+            echo "::warning::No Android signing key in this run's secrets; the APK is signed with a throwaway debug key and will not install over other builds"
+            exit 0
+          fi
+          keystore="$RUNNER_TEMP/doki-release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$keystore"
+          echo "DOKI_ANDROID_KEYSTORE=$keystore" >> "$GITHUB_ENV"
       - name: Build APK
         working-directory: app
-        run: flutter build apk --release
+        env:
+          DOKI_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          DOKI_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          DOKI_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        # A newer build must have a larger versionCode or Android refuses
+        # to install it over the older one.
+        run: flutter build apk --release --build-number "$(../tools/android-version-code.sh)"
+      - name: Check the APK's signature
+        run: |
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$apksigner" verify --print-certs app/build/app/outputs/flutter-apk/app-release.apk | tee /tmp/certs.txt
+          if [ -n "${DOKI_ANDROID_KEYSTORE:-}" ] && grep -q 'CN=Android Debug' /tmp/certs.txt; then
+            echo "::error::The APK is signed with the debug key, not Doki's key"
+            exit 1
+          fi
+          rm -f "$RUNNER_TEMP/doki-release.jks"
       - name: Check the APK carries the engine
         run: |
           unzip -l app/build/app/outputs/flutter-apk/app-release.apk | tee /tmp/apk.txt | grep -q 'lib/arm64-v8a/libdoki_jni.so'
           grep -q 'lib/x86_64/libdoki_jni.so' /tmp/apk.txt
       - name: Check the APK keeps the bridge names the engine calls
         run: tools/check-apk-bridge.sh app/build/app/outputs/flutter-apk/app-release.apk
-      - name: Upload APK (test build, debug-signed)
+      - name: Upload APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: doki-android

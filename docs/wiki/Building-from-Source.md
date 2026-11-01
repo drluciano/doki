@@ -48,14 +48,16 @@ Needs the Android SDK and NDK, the Rust Android targets and `cargo-ndk`:
 rustup target add aarch64-linux-android x86_64-linux-android
 cargo install cargo-ndk --locked
 tools/build-android-engine.sh      # writes app/android/app/src/main/jniLibs
-cd app && flutter build apk
+cd app && flutter build apk      # signed with a debug key unless DOKI_ANDROID_KEYSTORE is set (see docs/release.md)
 ```
 
 The Java bridge can be tested without a device: `tools/jni-desktop-test.sh`.
 
 ## Test builds from CI
 
-`.github/workflows/app.yml` runs the app tests on Linux and Windows and uploads these artifacts on every run: `doki-windows-setup` (the installer, unsigned), `doki-windows` (the same app as a plain folder) `doki-android` (debug-signed APK), and `doki-linux-x86_64` and `doki-linux-aarch64` (Flatpak bundles). They are test builds, not releases.
+`.github/workflows/app.yml` runs the app tests on Linux and Windows and uploads these artifacts on every run: `doki-windows-setup` (the installer, unsigned), `doki-windows` (the same app as a plain folder), `doki-android` (the APK, signed with Doki's key when the repository has it), and `doki-linux-x86_64` and `doki-linux-aarch64` (Flatpak bundles). They are test builds, not releases.
+
+Releases are built by `.github/workflows/release.yml` through the same workflow. [docs/release.md](https://github.com/drluciano/doki/blob/main/docs/release.md) is the runbook: bumping the version, the changelog, the Android signing key and publishing.
 
 ## Contributing
 
