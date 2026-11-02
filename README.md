@@ -190,4 +190,4 @@ If you find a security problem, please report it privately to the maintainer ([@
 
 ## License
 
-A license has not been chosen yet, so no permission to use, copy or redistribute this code is granted beyond what GitHub's terms allow. This will be settled before the first release.
+Doki is released under the [MIT License](LICENSE).
