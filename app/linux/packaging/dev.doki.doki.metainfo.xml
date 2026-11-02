@@ -4,6 +4,7 @@
   <name>Doki</name>
   <summary>Hand your game saves between devices</summary>
   <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
   <developer id="dev.doki">
     <name>Doki</name>
   </developer>

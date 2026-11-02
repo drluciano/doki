@@ -40,4 +40,4 @@ If you changed the app, also run `tools/app-test.sh` (format, analyze, widget te
 - Pull requests reference their issue with `Refs #N` rather than closing keywords. The maintainer merges pull requests and closes issues.
 - Update the docs and wiki pages (`docs/wiki`) a change affects in the same pull request.
 
-No license has been chosen yet. Do not copy code or assets from other projects into Doki.
+Doki is under the [MIT License](LICENSE), and contributions are accepted under the same license. Only bring in code or assets from other projects when their license allows it, and say where they came from in the pull request.
